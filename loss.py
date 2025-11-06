@@ -9,7 +9,7 @@ class HybridLoss(nn.Module):
     输入输出尺寸: [B, 1, H, W]
     """
     def __init__(self, alpha=0.7, beta=0.2, gamma=0.1,
-                 window_size=11, window_sigma=1.5, device='cuda'):
+                 window_size=11, window_sigma=1.5, device='cpu'):
         super(HybridLoss, self).__init__()
         self.alpha = alpha
         self.beta = beta
@@ -18,7 +18,7 @@ class HybridLoss(nn.Module):
         self.device = device
 
         # 高斯卷积核，用于 SSIM
-        self.gaussian_kernel = self.create_gaussian_kernel(window_size, window_sigma).to(device)
+        self.gaussian_kernel = self.create_gaussian_kernel(window_size, window_sigma)
 
         # Sobel 卷积核，用于 Edge Loss
         self.sobel_x = torch.tensor([[1,0,-1],[2,0,-2],[1,0,-1]], dtype=torch.float32, device=device).view(1,1,3,3)

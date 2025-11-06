@@ -307,7 +307,6 @@ def main(args):
         mode="min",          # 基于"验证损失"最小化调整
         factor=0.5,          # 学习率降低为原来的1/2
         patience=3,          # 连续3个epoch无改善则调整
-        verbose=True,        # 调整时打印日志
         min_lr=1e-7          # 学习率下限
     )
     # 指标计算器（data_range需与预处理后图像范围匹配，这里假设[0,1]）
