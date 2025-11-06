@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="b3917eb7-b505-468d-af04-354007a85ec0" name="默认变更列表" comment="修改代码" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FlaskConsoleOptions" custom-start-script="import sys&#10;sys.path.extend([WORKING_DIR_AND_PYTHON_PATHS])&#10;from flask.cli import ScriptInfo&#10;locals().update(ScriptInfo(create_app=None).load_app().make_shell_context())&#10;print(&quot;Python %s on %s\nApp: %s [%s]\nInstance: %s&quot; % (sys.version, sys.platform, app.import_name, app.env, app.instance_path))">
+    <envs>
+      <env key="FLASK_APP" value="app" />
+    </envs>
+    <option name="myCustomStartScript" value="import sys&#10;sys.path.extend([WORKING_DIR_AND_PYTHON_PATHS])&#10;from flask.cli import ScriptInfo&#10;locals().update(ScriptInfo(create_app=None).load_app().make_shell_context())&#10;print(&quot;Python %s on %s\nApp: %s [%s]\nInstance: %s&quot; % (sys.version, sys.platform, app.import_name, app.env, app.instance_path))" />
+    <option name="myEnvs">
+      <map>
+        <entry key="FLASK_APP" value="app" />
+      </map>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <excluded-from-favorite>
+      <branch-storage>
+        <map>
+          <entry type="REMOTE">
+            <value>
+              <list>
+                <branch-info repo="$PROJECT_DIR$" source="origin/master" />
+              </list>
+            </value>
+          </entry>
+        </map>
+      </branch-storage>
+    </excluded-from-favorite>
+    <option name="PREVIOUS_COMMIT_AUTHORS">
+      <list>
+        <option value="Leechion" />
+      </list>
+    </option>
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="lee" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GithubDefaultAccount">
+    <option name="defaultAccountId" value="68d0ceb3-ab26-4257-bfdd-efb56c223cb0" />
+  </component>
+  <component name="ProjectId" id="356iBfKoWB71UnesmJZdw9S7YmQ" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="node.js.detected.package.eslint" value="true" />
+    <property name="node.js.detected.package.tslint" value="true" />
+    <property name="node.js.selected.package.eslint" value="(autodetect)" />
+    <property name="node.js.selected.package.tslint" value="(autodetect)" />
+    <property name="settings.editor.selected.configurable" value="org.jetbrains.plugins.github.ui.GithubSettingsConfigurable" />
+  </component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="D:\pythonProject\SwinTransCT-main\SwinTransCT-main" />
+    </key>
+  </component>
+  <component name="RunManager">
+    <configuration name="train" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="SwinTransCT-main" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/SwinTransCT-main" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/SwinTransCT-main/train.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python.train" />
+        <item itemvalue="Python.train" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="应用程序级" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="默认任务">
+      <changelist id="b3917eb7-b505-468d-af04-354007a85ec0" name="默认变更列表" comment="" />
+      <created>1762436789392</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1762436789392</updated>
+      <workItem from="1762436790711" duration="3593000" />
+      <workItem from="1762440485646" duration="1667000" />
+    </task>
+    <task id="LOCAL-00001" summary="修改代码">
+      <created>1762438140044</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1762438140044</updated>
+    </task>
+    <task id="LOCAL-00002" summary="修改代码">
+      <created>1762438520005</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1762438520005</updated>
+    </task>
+    <task id="LOCAL-00003" summary="修改代码">
+      <created>1762440779402</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1762440779402</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="master" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
+    <option name="RECENT_FILTERS">
+      <map>
+        <entry key="Branch">
+          <value>
+            <list>
+              <RecentGroup>
+                <option name="FILTER_VALUES">
+                  <option value="origin/main" />
+                </option>
+              </RecentGroup>
+            </list>
+          </value>
+        </entry>
+      </map>
+    </option>
+    <option name="oldMeFiltersMigrated" value="true" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <option name="CHECK_CODE_SMELLS_BEFORE_PROJECT_COMMIT" value="true" />
+    <MESSAGE value="代码修改" />
+    <MESSAGE value="修改代码" />
+    <option name="LAST_COMMIT_MESSAGE" value="修改代码" />
+    <option name="OPTIMIZE_IMPORTS_BEFORE_PROJECT_COMMIT" value="true" />
+    <option name="REFORMAT_BEFORE_PROJECT_COMMIT" value="true" />
+    <option name="REARRANGE_BEFORE_PROJECT_COMMIT" value="true" />
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/SwinTransCT_main$train.coverage" NAME="train 覆盖结果" MODIFIED="1762437313188" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/SwinTransCT-main" />
+  </component>
+</project>
