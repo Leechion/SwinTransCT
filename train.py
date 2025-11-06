@@ -370,6 +370,7 @@ def main(args):
     # 新增：本地保存图像对比网格
     # --------------------------
         save_freq = 3  # 每5个epoch保存一次（可调整为1、10等）
+        val_first_batch  = next(iter(val_loader))
         if epoch % save_freq == 0:
         # 获取第一个batch的第一个样本
          ld_sample, nd_sample = val_first_batch
@@ -448,7 +449,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", type=str, default="./data")
+    parser.add_argument("--data_dir", type=str, default="./ND_LD_Paired_Data")
     parser.add_argument("--epochs", type=int, default=300)
     parser.add_argument("--batch_size", type=int, default=8)
     parser.add_argument("--lr", type=float, default=1e-4)

@@ -138,8 +138,8 @@ class TrainingRecorder:
             "val_psnr": round(val_metrics["psnr"], 4),
             "val_ssim": round(val_metrics["ssim"], 6),
             "val_rmse": round(val_metrics["rmse"], 6),
-            "lr": round(current_lr, 8),
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            "lr": round(current_lr, 8)
+
         }
         
         # 追加写入CSV

@@ -7,8 +7,8 @@ from tqdm import tqdm
 # 1. 配置参数（请确认路径正确！）
 # --------------------------
 # 原始配对数据路径（批量处理生成的ND和LD文件夹）
-ND_RAW_DIR = "/Users/lxxxx/Desktop/CODE/SwinCT/ND_LD_Paired_Data/ND"
-LD_RAW_DIR = "/Users/lxxxx/Desktop/CODE/SwinCT/ND_LD_Paired_Data/LD"
+ND_RAW_DIR = "./ND_LD_Paired_Data/ND"
+LD_RAW_DIR = "./ND_LD_Paired_Data/LD"
 
 # 划分后的数据保存根路径（与原始数据同目录，会自动创建train/val/test）
 OUTPUT_ROOT = "/Users/lxxxx/Desktop/CODE/SwinCT/ND_LD_Paired_Data"
