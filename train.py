@@ -26,7 +26,6 @@ random.seed(0)
 
 def save_image_grid(ld_img, nd_img, output_img, save_path, epoch):
     """
-    保存一行3列的图像对比图（仅取第一个样本，避免多样本干扰）
     布局：低剂量输入 → 正常剂量标签 → 模型输出
     Args:
         ld_img: 低剂量CT输入 [B,1,H,W]
