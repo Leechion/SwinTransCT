@@ -15,7 +15,7 @@ from torchvision.utils import make_grid
 from loss import HybridLoss
 from dataset import CTDataset, get_pair_list  # 我的数据集类
 from model_improve import LDCTNet_Swin_improve                # 我的LDCTNet_Swin模型
-from Trans_model import LDCTNet256                # 你的LDCTNet_Swin模型
+from Trans_model_writer import LDCTNet256                # 你的LDCTNet_Swin模型
 from utils import ImageMetrics                # 指标计算模块（PSNR/SSIM/RMSE）
 from utils import TrainingRecorder                # 指标计算模块（PSNR/SSIM/RMSE）
 

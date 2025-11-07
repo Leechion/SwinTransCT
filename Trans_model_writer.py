@@ -87,7 +87,7 @@ class DecoderLayer(nn.Module):
 # 主模型定义
 # ==========================
 
-class LDCTNet(nn.Module):
+class LDCTNet256(nn.Module):
     def __init__(self):
         super().__init__()
 
