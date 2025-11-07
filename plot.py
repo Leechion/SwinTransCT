@@ -3,115 +3,157 @@ import matplotlib.pyplot as plt
 import argparse
 import os
 
-# 设置中文字体（避免中文乱码）
-plt.rcParams['font.sans-serif'] = ['SimHei']  # Windows：SimHei / Mac：Arial Unicode MS
-plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
-
-def plot_training_metrics(csv_path, save_dir="metrics_plots", figsize=(15, 10), dpi=300):
+def plot_training_metrics_separate(csv_path, save_dir="sci_metrics_plots_separate", figsize=(16, 12), dpi=600):
     """
-    从CSV文件绘制训练/验证指标曲线图
+    SCI风格训练/验证指标绘图（train和val分离，优化线条粗细，提升观感）
     Args:
         csv_path: CSV指标文件路径（training_metrics.csv）
         save_dir: 图表保存目录
-        figsize: 图表尺寸
-        dpi: 保存图片的分辨率（300为高清，适合论文）
+        figsize: 图表尺寸（适配SCI论文多子图布局）
+        dpi: 分辨率（SCI要求≥600）
     """
-    # 1. 读取CSV文件
+    # 1. 读取并校验CSV文件
     if not os.path.exists(csv_path):
-        print(f"错误：未找到CSV文件 {csv_path}")
-        return
+        raise FileNotFoundError(f"未找到CSV文件：{csv_path}")
     
     df = pd.read_csv(csv_path)
-    print(f"成功读取CSV文件，共 {len(df)} 个epoch的指标")
-    print("CSV文件列名：", df.columns.tolist())
+    df = df.drop_duplicates(subset=['epoch'], keep='last').reset_index(drop=True)
+    print(f"成功读取CSV文件，共 {len(df)} 个有效epoch的指标")
 
     # 2. 创建保存目录
     os.makedirs(save_dir, exist_ok=True)
 
-    # 3. 设置图表样式（专业美观）
-    plt.style.use('default')
-    colors = ['#2E86AB', '#A23B72', '#F18F01', '#C73E1D']  # 专业配色方案
-    markers = ['o', 's', '^', 'D']  # 标记点样式（可选）
-    line_width = 2.0
-    marker_size = 4
+    # 3. SCI核心样式配置（优化字体大小比例，更协调）
+    plt.rcParams.update({
+        'font.family': 'Times New Roman',  # 期刊标准字体
+        'font.size': 9,                    # 基础字体缩小，避免遮挡
+        'axes.unicode_minus': False,
+        'axes.linewidth': 0.9,             # 坐标轴线条稍纤细，更柔和
+        'grid.linewidth': 0.4,             # 网格线弱化，不抢焦点
+        'legend.frameon': True,
+        'legend.framealpha': 0.95,         # 图例背景更透明
+        'legend.edgecolor': 'gray',        # 图例边框灰色，不突兀
+        'legend.fontsize': 8,              # 图例字体缩小
+        'legend.labelspacing': 0.3,        # 图例条目间距缩小
+    })
 
-    # 4. 创建2x2子图（分别显示4个指标）
-    fig, axes = plt.subplots(2, 2, figsize=figsize)
-    fig.suptitle('训练过程指标变化曲线', fontsize=16, fontweight='bold', y=0.98)
+    # 4. 优化线条与标记样式（核心调整：纤细清晰，提升观感）
+    styles = {
+        'train': {
+            'color': '#0072B2',            # 训练集：深蓝色（稳定专业）
+            'linewidth': 1.2,              # 线条粗细优化（原1.6→1.2，更纤细）
+            'marker': 'o',                 # 圆形标记
+            'markersize': 3.0,             # 标记点缩小（原4.0→3.0，不拥挤）
+            'markevery': max(1, len(df)//20),  # 间隔显示标记点（避免epoch多时空叠）
+            'alpha': 0.9                   # 透明度适中，避免过浓
+        },
+        'val': {
+            'color': '#D55E00',            # 验证集：深橙色（醒目不刺眼）
+            'linewidth': 1.2,              # 统一线条粗细
+            'marker': 's',                 # 方形标记
+            'markersize': 3.0,             # 标记点缩小
+            'markevery': max(1, len(df)//20),  # 间隔显示标记点
+            'alpha': 0.9
+        }
+    }
 
-    # 定义要绘制的指标（与CSV列名对应）
+    # 5. 创建4×2子图布局（保持紧凑，优化子图间距）
+    fig, axes = plt.subplots(4, 2, figsize=figsize, constrained_layout=True,
+                             gridspec_kw={'wspace': 0.2, 'hspace': 0.3})  # 调整子图间距
+    fig.suptitle('Training and Validation Metrics During Model Training', 
+                 fontsize=13, fontweight='bold', y=1.01)  # 总标题字体稍小
+
+    # 6. 指标配置（保持不变）
     metrics_config = [
-        # (子图位置, 指标名称, 训练集列名, 验证集列名, y轴标签)
-        ((0, 0), '损失值 (Loss)', 'train_loss', 'val_loss', '损失值'),
-        ((0, 1), '峰值信噪比 (PSNR)', 'train_psnr', 'val_psnr', 'PSNR (dB)'),
-        ((1, 0), '结构相似性 (SSIM)', 'train_ssim', 'val_ssim', 'SSIM'),
-        ((1, 1), '均方根误差 (RMSE)', 'train_rmse', 'val_rmse', 'RMSE')
+        (0, 'Loss', 'train_loss', 'val_loss', 'Loss Value'),
+        (1, 'PSNR', 'train_psnr', 'val_psnr', 'PSNR (dB)'),
+        (2, 'SSIM', 'train_ssim', 'val_ssim', 'SSIM'),
+        (3, 'RMSE', 'train_rmse', 'val_rmse', 'RMSE')
     ]
 
-    # 5. 逐个绘制指标曲线
-    for (row, col), title, train_col, val_col, ylabel in metrics_config:
-        ax = axes[row, col]
-        
-        # 绘制训练集曲线
-        ax.plot(
+    # 7. 逐个绘制子图（优化细节，提升观感）
+    for row, metric_name, train_col, val_col, ylabel in metrics_config:
+        # ---------------------- 绘制训练集子图（左列）----------------------
+        ax_train = axes[row, 0]
+        ax_train.plot(
             df['epoch'], df[train_col],
-            color=colors[0], linewidth=line_width, marker=markers[0], markersize=marker_size,
-            label=f'训练集', alpha=0.8
+            **styles['train'],  # 应用训练集样式
+            label='Training'
         )
-        
-        # 绘制验证集曲线
-        ax.plot(
+        # 子图配置优化
+        ax_train.set_title(f'{metric_name} (Training)', fontsize=10, fontweight='bold', pad=8)
+        ax_train.set_xlabel('Epoch', fontsize=8.5)
+        ax_train.set_ylabel(ylabel, fontsize=8.5)
+        # 坐标轴优化（更精细）
+        x_margin = max(1, len(df['epoch']) * 0.03)  # 缩小x轴留白（原5%→3%）
+        ax_train.set_xlim(left=df['epoch'].min() - x_margin, right=df['epoch'].max() + x_margin)
+        y_min = df[train_col].min()
+        y_max = df[train_col].max()
+        y_margin = (y_max - y_min) * 0.03  # 缩小y轴留白
+        ax_train.set_ylim(bottom=y_min - y_margin, top=y_max + y_margin)
+        # 网格与边框（更柔和）
+        ax_train.grid(True, axis='y', alpha=0.25, linestyle='-', linewidth=0.3)
+        ax_train.spines['top'].set_visible(False)
+        ax_train.spines['right'].set_visible(False)
+        ax_train.legend(loc='best', frameon=True, fancybox=False, shadow=False)
+        # 刻度优化（更纤细）
+        ax_train.tick_params(axis='both', which='major', direction='in', 
+                             length=3, width=0.7, labelsize=8)
+
+        # ---------------------- 绘制验证集子图（右列）----------------------
+        ax_val = axes[row, 1]
+        ax_val.plot(
             df['epoch'], df[val_col],
-            color=colors[1], linewidth=line_width, marker=markers[1], markersize=marker_size,
-            label=f'验证集', alpha=0.8
+            **styles['val'],  # 应用验证集样式
+            label='Validation'
         )
-        
-        # 设置子图标题和标签
-        ax.set_title(title, fontsize=14, fontweight='bold', pad=10)
-        ax.set_xlabel('Epoch', fontsize=12)
-        ax.set_ylabel(ylabel, fontsize=12)
-        
-        # 添加网格（便于读取数值）
-        ax.grid(True, alpha=0.3, linestyle='--')
-        
-        # 添加图例
-        ax.legend(loc='best', fontsize=10)
-        
-        # 优化坐标轴刻度
-        ax.tick_params(axis='both', which='major', labelsize=10)
+        # 子图配置优化
+        ax_val.set_title(f'{metric_name} (Validation)', fontsize=10, fontweight='bold', pad=8)
+        ax_val.set_xlabel('Epoch', fontsize=8.5)
+        ax_val.set_ylabel(ylabel, fontsize=8.5)
+        # 坐标轴与训练集对齐（便于对比）
+        ax_val.set_xlim(ax_train.get_xlim())
+        y_min_val = df[val_col].min()
+        y_max_val = df[val_col].max()
+        y_margin_val = (y_max_val - y_min_val) * 0.03
+        ax_val.set_ylim(bottom=y_min_val - y_margin_val, top=y_max_val + y_margin_val)
+        # 网格与边框
+        ax_val.grid(True, axis='y', alpha=0.25, linestyle='-', linewidth=0.3)
+        ax_val.spines['top'].set_visible(False)
+        ax_val.spines['right'].set_visible(False)
+        ax_val.legend(loc='best', frameon=True, fancybox=False, shadow=False)
+        # 刻度优化
+        ax_val.tick_params(axis='both', which='major', direction='in', 
+                           length=3, width=0.7, labelsize=8)
 
-    # 6. 调整子图间距（避免重叠）
-    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    # 8. 保存SCI标准格式文件（保持高分辨率）
+    # PNG格式（预览用，600 DPI）
+    png_path = os.path.join(save_dir, 'training_val_metrics_separate_sci.png')
+    plt.savefig(png_path, dpi=dpi, bbox_inches='tight', facecolor='white', edgecolor='none')
+    print(f"SCI风格PNG图已保存：{png_path}")
 
-    # 7. 保存高清图片（支持PNG/JPG/SVG格式）
-    save_path_png = os.path.join(save_dir, 'training_metrics.png')
-    plt.savefig(save_path_png, dpi=dpi, bbox_inches='tight', facecolor='white')
-    print(f"图表已保存为：{save_path_png}")
+    # EPS矢量图（论文提交用）
+    eps_path = os.path.join(save_dir, 'training_val_metrics_separate_sci.eps')
+    plt.savefig(eps_path, format='eps', bbox_inches='tight', facecolor='white', edgecolor='none')
+    print(f"SCI标准EPS矢量图已保存：{eps_path}")
 
-    # 可选：保存为SVG矢量图（无限放大不失真，适合论文）
-    save_path_svg = os.path.join(save_dir, 'training_metrics.svg')
-    plt.savefig(save_path_svg, bbox_inches='tight', facecolor='white')
-    print(f"矢量图已保存为：{save_path_svg}")
-
-    # 8. 显示图表（可选）
+    # 可选：显示图表（本地调试）
     plt.show()
 
 if __name__ == "__main__":
-    # 解析命令行参数
-    parser = argparse.ArgumentParser(description='绘制训练指标曲线图')
-    parser.add_argument('--csv_path', type=str, 
-                        default='/Users/lxxxx/Desktop/CODE/SwinCT/logs/training_metrics.csv')
-    parser.add_argument('--save_dir', type=str, default='metrics_plots', 
-                        help='图表保存目录（默认：metrics_plots）')
-    parser.add_argument('--figsize', type=tuple, default=(15, 10), 
-                        help='图表尺寸（默认：(15,10)）')
-    parser.add_argument('--dpi', type=int, default=500, 
-                        help='图片分辨率（默认：500，越高越清晰）')
+    parser = argparse.ArgumentParser(description='SCI-style plots (train/val separated, optimized style)')
+    parser.add_argument('--csv_path', type=str, default='./logs/training_metrics.csv',
+                        help='Path to training_metrics.csv (e.g., ./training_metrics.csv)')
+    parser.add_argument('--save_dir', type=str, default='./sci_metrics_separate',
+                        help='Directory to save optimized plots (default: sci_metrics_separate_optimized)')
+    parser.add_argument('--figsize', type=tuple, default=(16, 12),
+                        help='Figure size (width, height) for 4×2 subplots (default: (16,12))')
+    parser.add_argument('--dpi', type=int, default=600,
+                        help='DPI for raster images (SCI requires ≥600, default: 600)')
 
     args = parser.parse_args()
     
-    # 运行绘图函数
-    plot_training_metrics(
+    plot_training_metrics_separate(
         csv_path=args.csv_path,
         save_dir=args.save_dir,
         figsize=args.figsize,
