@@ -292,7 +292,9 @@ def main(args):
 
 
     # 损失函数（MSE适合CT剂量恢复，可后续替换为MSE+SSIM混合损失）
-    criterion = HybridLoss().to(device)
+    # criterion = HybridLoss().to(device)  
+    criterion = nn.MSELoss().to(device)
+
     
     # 优化器（Adam + 权重衰减防过拟合）
     optimizer = optim.Adam(
