@@ -186,7 +186,7 @@ def validate(model, val_loader, criterion, metrics_fn, device, epoch, writer):
             })
 
             # 5. 记录验证集图像对比（每5个epoch，仅取第一个batch的第一张图）
-            if epoch % 10 == 0 and batch_idx == 0:
+            if epoch % 5 == 0 and batch_idx == 0:
                 # 图像归一化到[0,1]（TensorBoard显示需要）
                 def normalize_img(img_tensor):
                     img = img_tensor.cpu().numpy()[0, 0]  # (B,1,H,W) → (H,W)
@@ -369,8 +369,7 @@ def main(args):
     # --------------------------
     # 新增：本地保存图像对比网格
     # --------------------------
-        save_freq = 3  # 每5个epoch保存一次（可调整为1、10等）
-        val_first_batch  = next(iter(val_loader))
+        save_freq = 5  # 每5个epoch保存一次（可调整为1、10等）
         if epoch % save_freq == 0:
         # 获取第一个batch的第一个样本
          ld_sample, nd_sample = val_first_batch
