@@ -63,8 +63,8 @@ def get_pair_list(data_dir, split='train'):
     ld_dir = os.path.join(data_dir, split, 'low_dose')
     nd_dir = os.path.join(data_dir, split, 'full_dose')
 
-    ld_files = sorted([f for f in os.listdir(ld_dir) if f.lower().endswith('.jpg')])
-    nd_files = sorted([f for f in os.listdir(nd_dir) if f.lower().endswith('.jpg')])
+    ld_files = sorted([f for f in os.listdir(ld_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png'))])
+    nd_files = sorted([f for f in os.listdir(nd_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png'))])
 
     pair_list = [
         (os.path.join(ld_dir, ld_f), os.path.join(nd_dir, nd_f))
