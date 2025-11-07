@@ -10,6 +10,7 @@
 # gpu: 0
 # resume: 
 # 
+<<<<<<< HEAD
 epoch,train_loss,train_psnr,train_ssim,train_rmse,val_loss,val_psnr,val_ssim,val_rmse,lr,timestamp
 0,0.294701,14.283,0.248206,0.214555,0.249378,15.2046,0.309767,0.17489,0.0001
 1,0.243591,15.3901,0.329932,0.170272,0.236526,15.8411,0.347381,0.16236,0.0001

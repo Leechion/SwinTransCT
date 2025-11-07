@@ -1,0 +1,2134 @@
+Index: SwinTransCT-main/plot.py
+===================================================================
+diff --git a/SwinTransCT-main/plot.py b/SwinTransCT-main/plot.py
+deleted file mode 100644
+--- a/SwinTransCT-main/plot.py	(revision 7a4bc7d60dc78b00aa690a7d9b931c88b34458fb)
++++ /dev/null	(revision 7a4bc7d60dc78b00aa690a7d9b931c88b34458fb)
+@@ -1,122 +0,0 @@
+-import argparse
+-import os
+-
+-import matplotlib.pyplot as plt
+-import pandas as pd
+-
+-# 设置中文字体（避免中文乱码）
+-plt.rcParams['font.sans-serif'] = ['SimHei']  # Windows：SimHei / Mac：Arial Unicode MS
+-plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
+-
+-
+-def plot_training_metrics(csv_path, save_dir="metrics_plots", figsize=(15, 10), dpi=300):
+-    """
+-    从CSV文件绘制训练/验证指标曲线图
+-    Args:
+-        csv_path: CSV指标文件路径（training_metrics.csv）
+-        save_dir: 图表保存目录
+-        figsize: 图表尺寸
+-        dpi: 保存图片的分辨率（300为高清，适合论文）
+-    """
+-    # 1. 读取CSV文件
+-    if not os.path.exists(csv_path):
+-        print(f"错误：未找到CSV文件 {csv_path}")
+-        return
+-
+-    df = pd.read_csv(csv_path)
+-    print(f"成功读取CSV文件，共 {len(df)} 个epoch的指标")
+-    print("CSV文件列名：", df.columns.tolist())
+-
+-    # 2. 创建保存目录
+-    os.makedirs(save_dir, exist_ok=True)
+-
+-    # 3. 设置图表样式（专业美观）
+-    plt.style.use('default')
+-    colors = ['#2E86AB', '#A23B72', '#F18F01', '#C73E1D']  # 专业配色方案
+-    markers = ['o', 's', '^', 'D']  # 标记点样式（可选）
+-    line_width = 2.0
+-    marker_size = 4
+-
+-    # 4. 创建2x2子图（分别显示4个指标）
+-    fig, axes = plt.subplots(2, 2, figsize=figsize)
+-    fig.suptitle('训练过程指标变化曲线', fontsize=16, fontweight='bold', y=0.98)
+-
+-    # 定义要绘制的指标（与CSV列名对应）
+-    metrics_config = [
+-        # (子图位置, 指标名称, 训练集列名, 验证集列名, y轴标签)
+-        ((0, 0), '损失值 (Loss)', 'train_loss', 'val_loss', '损失值'),
+-        ((0, 1), '峰值信噪比 (PSNR)', 'train_psnr', 'val_psnr', 'PSNR (dB)'),
+-        ((1, 0), '结构相似性 (SSIM)', 'train_ssim', 'val_ssim', 'SSIM'),
+-        ((1, 1), '均方根误差 (RMSE)', 'train_rmse', 'val_rmse', 'RMSE')
+-    ]
+-
+-    # 5. 逐个绘制指标曲线
+-    for (row, col), title, train_col, val_col, ylabel in metrics_config:
+-        ax = axes[row, col]
+-
+-        # 绘制训练集曲线
+-        ax.plot(
+-            df['epoch'], df[train_col],
+-            color=colors[0], linewidth=line_width, marker=markers[0], markersize=marker_size,
+-            label=f'训练集', alpha=0.8
+-        )
+-
+-        # 绘制验证集曲线
+-        ax.plot(
+-            df['epoch'], df[val_col],
+-            color=colors[1], linewidth=line_width, marker=markers[1], markersize=marker_size,
+-            label=f'验证集', alpha=0.8
+-        )
+-
+-        # 设置子图标题和标签
+-        ax.set_title(title, fontsize=14, fontweight='bold', pad=10)
+-        ax.set_xlabel('Epoch', fontsize=12)
+-        ax.set_ylabel(ylabel, fontsize=12)
+-
+-        # 添加网格（便于读取数值）
+-        ax.grid(True, alpha=0.3, linestyle='--')
+-
+-        # 添加图例
+-        ax.legend(loc='best', fontsize=10)
+-
+-        # 优化坐标轴刻度
+-        ax.tick_params(axis='both', which='major', labelsize=10)
+-
+-    # 6. 调整子图间距（避免重叠）
+-    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+-
+-    # 7. 保存高清图片（支持PNG/JPG/SVG格式）
+-    save_path_png = os.path.join(save_dir, 'training_metrics.png')
+-    plt.savefig(save_path_png, dpi=dpi, bbox_inches='tight', facecolor='white')
+-    print(f"图表已保存为：{save_path_png}")
+-
+-    # 可选：保存为SVG矢量图（无限放大不失真，适合论文）
+-    save_path_svg = os.path.join(save_dir, 'training_metrics.svg')
+-    plt.savefig(save_path_svg, bbox_inches='tight', facecolor='white')
+-    print(f"矢量图已保存为：{save_path_svg}")
+-
+-    # 8. 显示图表（可选）
+-    plt.show()
+-
+-
+-if __name__ == "__main__":
+-    # 解析命令行参数
+-    parser = argparse.ArgumentParser(description='绘制训练指标曲线图')
+-    parser.add_argument('--csv_path', type=str,
+-                        default='/Users/lxxxx/Desktop/CODE/SwinCT/logs/training_metrics.csv')
+-    parser.add_argument('--save_dir', type=str, default='metrics_plots',
+-                        help='图表保存目录（默认：metrics_plots）')
+-    parser.add_argument('--figsize', type=tuple, default=(15, 10),
+-                        help='图表尺寸（默认：(15,10)）')
+-    parser.add_argument('--dpi', type=int, default=500,
+-                        help='图片分辨率（默认：500，越高越清晰）')
+-
+-    args = parser.parse_args()
+-
+-    # 运行绘图函数
+-    plot_training_metrics(
+-        csv_path=args.csv_path,
+-        save_dir=args.save_dir,
+-        figsize=args.figsize,
+-        dpi=args.dpi
+-    )
+Index: SwinTransCT-main/dataset.py
+===================================================================
+diff --git a/SwinTransCT-main/dataset.py b/SwinTransCT-main/dataset.py
+deleted file mode 100644
+--- a/SwinTransCT-main/dataset.py	(revision 7a4bc7d60dc78b00aa690a7d9b931c88b34458fb)
++++ /dev/null	(revision 7a4bc7d60dc78b00aa690a7d9b931c88b34458fb)
+@@ -1,74 +0,0 @@
+-import os
+-import random
+-
+-import torch
+-import torchvision.transforms as T
+-from PIL import Image
+-from torch.utils.data import Dataset
+-
+-
+-class CTDataset(Dataset):
+-    """CT数据集加载器：增强 + 标准化 + 更快加载"""
+-
+-    def __init__(self, pair_list, target_size=256, augment=True):
+-        self.samples = pair_list
+-        self.target_size = target_size
+-        self.augment = augment
+-
+-        # 预定义 torchvision 变换管道（更快更稳定）
+-        self.to_tensor = T.Compose([
+-            T.Resize((target_size, target_size), interpolation=T.InterpolationMode.BILINEAR),
+-            T.ToTensor(),  # 自动转 [C,H,W], 并除以255
+-        ])
+-
+-    def __len__(self):
+-        return len(self.samples)
+-
+-    def __getitem__(self, idx):
+-        ld_path, nd_path = self.samples[idx]
+-
+-        # 读取
+-        ld_img = Image.open(ld_path).convert('L')
+-        nd_img = Image.open(nd_path).convert('L')
+-
+-        # Resize + 转Tensor
+-        ld_tensor = self.to_tensor(ld_img)
+-        nd_tensor = self.to_tensor(nd_img)
+-
+-        # ------------------------------
+-        # ✅ 数据增强（仅在训练集启用）
+-        # ------------------------------
+-        if self.augment:
+-            if random.random() < 0.5:
+-                ld_tensor = torch.flip(ld_tensor, dims=[2])  # 水平翻转
+-                nd_tensor = torch.flip(nd_tensor, dims=[2])
+-            if random.random() < 0.5:
+-                ld_tensor = torch.flip(ld_tensor, dims=[1])  # 垂直翻转
+-                nd_tensor = torch.flip(nd_tensor, dims=[1])
+-            if random.random() < 0.3:
+-                angle = random.choice([-5, -3, 3, 5])
+-                ld_tensor = T.functional.rotate(ld_tensor, angle)
+-                nd_tensor = T.functional.rotate(nd_tensor, angle)
+-
+-        # ------------------------------------
+-        # ✅ 像素标准化（将像素归一化到 [0,1]）
+-        # ------------------------------------
+-        ld_tensor = ld_tensor.clamp(0.0, 1.0)
+-        nd_tensor = nd_tensor.clamp(0.0, 1.0)
+-
+-        return ld_tensor, nd_tensor
+-
+-
+-# ------------------- 数据集加载函数 -------------------
+-def get_pair_list(data_dir, split='train'):
+-    ld_dir = os.path.join(data_dir, split, 'LD')
+-    nd_dir = os.path.join(data_dir, split, 'ND')
+-
+-    ld_files = sorted([f for f in os.listdir(ld_dir) if f.lower().endswith('.png')])
+-    nd_files = sorted([f for f in os.listdir(nd_dir) if f.lower().endswith('.png')])
+-
+-    pair_list = [
+-        (os.path.join(ld_dir, ld_f), os.path.join(nd_dir, nd_f))
+-        for ld_f, nd_f in zip(ld_files, nd_files)
+-    ]
+-    return pair_list
+Index: SwinTransCT-main/struct33.py
+===================================================================
+diff --git a/SwinTransCT-main/struct33.py b/SwinTransCT-main/struct33.py
+deleted file mode 100644
+--- a/SwinTransCT-main/struct33.py	(revision 7a4bc7d60dc78b00aa690a7d9b931c88b34458fb)
++++ /dev/null	(revision 7a4bc7d60dc78b00aa690a7d9b931c88b34458fb)
+@@ -1,27 +0,0 @@
+-import h5py
+-
+-# 替换为你的HDF5文件路径（复制错误提示中的路径）
+-hdf5_path = "/Users/lxxxx/Desktop/CODE/SwinCT/ground_truth_test/ground_truth_test_000.hdf5"
+-
+-
+-def print_hdf5_full_structure(hdf5_path):
+-    """完整打印HDF5文件的所有分组、数据集和形状"""
+-    with h5py.File(hdf5_path, "r") as f:
+-        print(f"=== HDF5文件结构：{hdf5_path} ===")
+-
+-        def traverse(obj, path=""):
+-            # 打印当前对象的路径和类型
+-            if isinstance(obj, h5py.Group):
+-                print(f"[分组] {path}")
+-                # 递归遍历子分组/数据集
+-                for key in sorted(obj.keys()):
+-                    traverse(obj[key], path + "/" + key)
+-            elif isinstance(obj, h5py.Dataset):
+-                # 数据集（重点关注形状为 (128, H, W) 或 (H, W, 128) 的）
+-                print(f"[数据集] {path} | 形状：{obj.shape} | 类型：{obj.dtype}")
+-
+-        traverse(f)
+-
+-
+-# 运行查看结构
+-print_hdf5_full_structure(hdf5_path)
+Index: SwinTransCT-main/split.py
+===================================================================
+diff --git a/SwinTransCT-main/split.py b/SwinTransCT-main/split.py
+deleted file mode 100644
+--- a/SwinTransCT-main/split.py	(revision 7a4bc7d60dc78b00aa690a7d9b931c88b34458fb)
++++ /dev/null	(revision 7a4bc7d60dc78b00aa690a7d9b931c88b34458fb)
+@@ -1,140 +0,0 @@
+-import os
+-import shutil
+-
+-import numpy as np
+-from tqdm import tqdm
+-
+-# --------------------------
+-# 1. 配置参数（请确认路径正确！）
+-# --------------------------
+-# 原始配对数据路径（批量处理生成的ND和LD文件夹）
+-ND_RAW_DIR = "/Users/lxxxx/Desktop/CODE/SwinCT/ND_LD_Paired_Data/ND"
+-LD_RAW_DIR = "/Users/lxxxx/Desktop/CODE/SwinCT/ND_LD_Paired_Data/LD"
+-
+-# 划分后的数据保存根路径（与原始数据同目录，会自动创建train/val/test）
+-OUTPUT_ROOT = "/Users/lxxxx/Desktop/CODE/SwinCT/ND_LD_Paired_Data"
+-
+-# 划分比例（8:1:1）
+-TRAIN_RATIO = 0.8
+-VAL_RATIO = 0.1
+-TEST_RATIO = 0.1
+-
+-# 随机种子（固定，确保可复现）
+-SEED = 42
+-np.random.seed(SEED)
+-
+-
+-# --------------------------
+-# 2. 修复：强制创建所有目标文件夹（关键！）
+-# --------------------------
+-def create_all_dirs():
+-    """提前创建所有需要的文件夹，避免FileNotFoundError"""
+-    # 定义所有需要的文件夹路径
+-    required_dirs = [
+-        os.path.join(OUTPUT_ROOT, "train", "ND"),
+-        os.path.join(OUTPUT_ROOT, "train", "LD"),
+-        os.path.join(OUTPUT_ROOT, "val", "ND"),
+-        os.path.join(OUTPUT_ROOT, "val", "LD"),
+-        os.path.join(OUTPUT_ROOT, "test", "ND"),
+-        os.path.join(OUTPUT_ROOT, "test", "LD")
+-    ]
+-
+-    # 循环创建文件夹（exist_ok=True 表示已存在也不报错）
+-    for dir_path in required_dirs:
+-        os.makedirs(dir_path, exist_ok=True)
+-        print(f"已确保文件夹存在：{dir_path}")
+-    print("\n所有目标文件夹创建完成！")
+-
+-
+-# --------------------------
+-# 3. 复制配对文件（逻辑不变）
+-# --------------------------
+-def copy_paired_images(image_filenames, split_type):
+-    """复制ND和LD配对图像到对应文件夹"""
+-    # 拼接源路径和目标路径
+-    nd_src_dir = ND_RAW_DIR
+-    ld_src_dir = LD_RAW_DIR
+-    nd_dst_dir = os.path.join(OUTPUT_ROOT, split_type, "ND")
+-    ld_dst_dir = os.path.join(OUTPUT_ROOT, split_type, "LD")
+-
+-    print(f"\n开始复制{split_type}集（{len(image_filenames)}对图像）...")
+-    for filename in tqdm(image_filenames):
+-        # 复制ND图像
+-        nd_src = os.path.join(nd_src_dir, filename)
+-        nd_dst = os.path.join(nd_dst_dir, filename)
+-        if os.path.exists(nd_src):  # 避免源文件不存在报错
+-            shutil.copy2(nd_src, nd_dst)
+-        else:
+-            print(f"警告：ND源文件不存在 → {nd_src}")
+-
+-        # 复制对应LD图像（文件名一致）
+-        ld_src = os.path.join(ld_src_dir, filename)
+-        ld_dst = os.path.join(ld_dst_dir, filename)
+-        if os.path.exists(ld_src):
+-            shutil.copy2(ld_src, ld_dst)
+-        else:
+-            print(f"警告：LD源文件不存在 → {ld_src}")
+-
+-
+-# --------------------------
+-# 4. 核心划分逻辑（调整执行顺序：先创建文件夹，再划分）
+-# --------------------------
+-def split_train_val_test():
+-    # 第一步：验证原始ND和LD文件夹是否存在，且文件数量一致
+-    if not os.path.exists(ND_RAW_DIR):
+-        raise FileNotFoundError(f"原始ND文件夹不存在！路径：{ND_RAW_DIR}")
+-    if not os.path.exists(LD_RAW_DIR):
+-        raise FileNotFoundError(f"原始LD文件夹不存在！路径：{LD_RAW_DIR}")
+-
+-    # 统计原始文件数量
+-    nd_filenames = [f for f in os.listdir(ND_RAW_DIR) if f.endswith(".png")]
+-    ld_filenames = [f for f in os.listdir(LD_RAW_DIR) if f.endswith(".png")]
+-    nd_count = len(nd_filenames)
+-    ld_count = len(ld_filenames)
+-
+-    if nd_count != ld_count:
+-        raise ValueError(f"ND和LD文件数量不匹配！ND：{nd_count}张，LD：{ld_count}张")
+-    if nd_count == 0:
+-        raise ValueError("原始ND文件夹中没有PNG图像！请检查批量处理是否成功。")
+-
+-    print(f"✅ 原始数据验证通过：共{nd_count}对ND-LD图像")
+-
+-    # 第二步：提前创建所有目标文件夹（修复核心）
+-    create_all_dirs()
+-
+-    # 第三步：随机打乱文件名，保证划分均匀
+-    shuffled_indices = np.random.permutation(nd_count)
+-    shuffled_filenames = [nd_filenames[i] for i in shuffled_indices]
+-
+-    # 第四步：计算各集数量（避免小数误差）
+-    train_count = int(nd_count * TRAIN_RATIO)
+-    val_count = int(nd_count * VAL_RATIO)
+-    test_count = nd_count - train_count - val_count  # 剩余归测试集
+-
+-    print(f"\n📊 划分方案：")
+-    print(f"训练集：{train_count}对 | 验证集：{val_count}对 | 测试集：{test_count}对")
+-
+-    # 第五步：分割文件名列表
+-    train_filenames = shuffled_filenames[:train_count]
+-    val_filenames = shuffled_filenames[train_count:train_count + val_count]
+-    test_filenames = shuffled_filenames[train_count + val_count:]
+-
+-    # 第六步：复制文件
+-    copy_paired_images(train_filenames, "train")
+-    copy_paired_images(val_filenames, "val")
+-    copy_paired_images(test_filenames, "test")
+-
+-    print("\n🎉 划分完成！")
+-    print(f"训练集：{os.path.join(OUTPUT_ROOT, 'train')}")
+-    print(f"验证集：{os.path.join(OUTPUT_ROOT, 'val')}")
+-    print(f"测试集：{os.path.join(OUTPUT_ROOT, 'test')}")
+-
+-
+-# --------------------------
+-# 5. 执行划分
+-# --------------------------
+-if __name__ == "__main__":
+-    try:
+-        split_train_val_test()
+-    except Exception as e:
+-        print(f"\n❌ 划分失败！错误：{str(e)}")
+Index: SwinTransCT-main/Trans_model.py
+===================================================================
+diff --git a/SwinTransCT-main/Trans_model.py b/SwinTransCT-main/Trans_model.py
+deleted file mode 100644
+--- a/SwinTransCT-main/Trans_model.py	(revision 7a4bc7d60dc78b00aa690a7d9b931c88b34458fb)
++++ /dev/null	(revision 7a4bc7d60dc78b00aa690a7d9b931c88b34458fb)
+@@ -1,237 +0,0 @@
+-import torch
+-import torch.nn as nn
+-import torch.nn.functional as F
+-
+-
+-class MultiHeadAttention(nn.Module):
+-    """多头注意力模块"""
+-
+-    def __init__(self, d_model, nhead):
+-        super(MultiHeadAttention, self).__init__()
+-        self.d_model = d_model
+-        self.nhead = nhead
+-        self.head_dim = d_model // nhead
+-        assert self.head_dim * nhead == d_model, "d_model must be divisible by nhead"
+-        self.qkv_proj = nn.Linear(d_model, 3 * d_model)
+-        self.out_proj = nn.Linear(d_model, d_model)
+-
+-    def forward(self, query, key=None, value=None):
+-        if key is None:
+-            key = query
+-        if value is None:
+-            value = key
+-
+-        b, n, d = query.shape
+-        qkv = self.qkv_proj(query).view(b, n, 3, self.nhead, self.head_dim).permute(2, 0, 3, 1, 4)
+-        q, k, v = qkv[0], qkv[1], qkv[2]  # [b, nhead, n, head_dim]
+-
+-        attn_scores = (q @ k.transpose(-2, -1)) / (self.head_dim ** 0.5)
+-        attn_probs = F.softmax(attn_scores, dim=-1)
+-        output = attn_probs @ v  # [b, nhead, n, head_dim]
+-        output = output.transpose(1, 2).contiguous().view(b, n, d)  # 合并多头
+-        return self.out_proj(output)
+-
+-
+-class FeedForward(nn.Module):
+-    """前馈网络"""
+-
+-    def __init__(self, d_model, dims):
+-        super(FeedForward, self).__init__()
+-        self.layers = nn.Sequential(
+-            nn.Linear(d_model, dims[0]),
+-            nn.LeakyReLU(inplace=True),
+-            nn.Linear(dims[0], dims[1])
+-        )
+-
+-    def forward(self, x):
+-        return self.layers(x)
+-
+-
+-class ResidualConnection(nn.Module):
+-    """残差连接（按你原意：norm -> sublayer -> add）"""
+-
+-    def __init__(self, d_model):
+-        super(ResidualConnection, self).__init__()
+-        self.norm = nn.LayerNorm(d_model)
+-
+-    def forward(self, x, sublayer=None):
+-        # sublayer 应该是一个 callable，接受 norm(x) 并返回同形输出
+-        if sublayer is not None:
+-            return x + sublayer(self.norm(x))
+-        # 若没有 sublayer，就做常规残差（x + norm(x)）
+-        return x + self.norm(x)
+-
+-
+-# 新增：按你原始意图实现的编码器层（保留结构，不改变设计）
+-class EncoderLayer(nn.Module):
+-    def __init__(self, d_model, nhead):
+-        super(EncoderLayer, self).__init__()
+-        self.mha = MultiHeadAttention(d_model, nhead)
+-        self.ff = FeedForward(d_model, [8 * d_model, d_model])
+-        self.res1 = ResidualConnection(d_model)
+-        self.res2 = ResidualConnection(d_model)
+-
+-    def forward(self, x):
+-        # x: [B, seq_len, d_model]
+-        x = self.res1(x, lambda y: self.mha(y))  # self-attention residual
+-        x = self.res2(x, lambda y: self.ff(y))  # feed-forward residual
+-        return x
+-
+-
+-# 新增：解码器层（含自注意力 + cross-attn + FF）
+-class DecoderLayer(nn.Module):
+-    def __init__(self, d_model, nhead):
+-        super(DecoderLayer, self).__init__()
+-        self.self_attn = MultiHeadAttention(d_model, nhead)
+-        self.cross_attn = MultiHeadAttention(d_model, nhead)
+-        self.ff = FeedForward(d_model, [8 * d_model, d_model])
+-        self.res1 = ResidualConnection(d_model)
+-        self.res2 = ResidualConnection(d_model)
+-        self.res3 = ResidualConnection(d_model)
+-
+-    def forward(self, x, memory):
+-        # x: [B, seq_x, d_model], memory: [B, seq_mem, d_model]
+-        x = self.res1(x, lambda y: self.self_attn(y))  # self-attn
+-        x = self.res2(x, lambda y: self.cross_attn(y, memory, memory))  # cross-attn(query=x, key/value=memory)
+-        x = self.res3(x, lambda y: self.ff(y))  # FFN
+-        return x
+-
+-
+-class LDCTNet256(nn.Module):
+-    def __init__(self):
+-        super(LDCTNet256, self).__init__()
+-        self.param = {
+-            'nx': 256, 'ny': 256, 'numIterations': 50000, 'u_water': 0.0205,
+-            'batchsize': 16, 'lr': 5e-5, 'retrain': False, 'epoch': 2500
+-        }
+-
+-        # 创建高斯核（放 CPU 上，forward 时发送到输入设备）
+-        self.gaussian_kernel = self._create_gaussian_kernel(11, 1.5)  # tensor on cpu
+-
+-        # LR路径（低频特征提取）
+-        self.lr_conv1 = nn.Conv2d(1, 16, kernel_size=5, stride=2, padding=2)  # 256→128
+-        self.lr_conv2 = nn.Conv2d(16, 32, kernel_size=5, stride=2, padding=2)  # 128→64
+-        self.lr_conv3 = nn.Conv2d(32, 64, kernel_size=5, stride=2, padding=2)  # 64→32
+-        self.lr_conv4 = nn.Conv2d(64, 256, kernel_size=5, stride=2, padding=2)  # 32→16
+-
+-        # HR路径（注意：space_to_depth(block_size=8) 对 1ch 输入会产生 64ch）
+-        # 因此第一层 conv 应接收 64 通道
+-        self.hr_process_convs = nn.Sequential(
+-            nn.Conv2d(64, 256, kernel_size=3, padding=1),  # <-- 64 -> 256
+-            nn.LeakyReLU(inplace=True),
+-            nn.Conv2d(256, 256, kernel_size=3, padding=1),
+-            nn.LeakyReLU(inplace=True),
+-            nn.Conv2d(256, 256, kernel_size=3, padding=1),
+-            nn.LeakyReLU(inplace=True)
+-        )
+-
+-        # 编码器与解码器（使用上面新增的 EncoderLayer / DecoderLayer）
+-        self.encoder_layers = nn.ModuleList([EncoderLayer(256, 8) for _ in range(3)])
+-        self.decoder_layers = nn.ModuleList([DecoderLayer(256, 8) for _ in range(3)])
+-
+-        # 特征融合层
+-        self.combine_convs1 = nn.Sequential(
+-            nn.Conv2d(256, 256, kernel_size=3, padding=1),
+-            nn.LeakyReLU(inplace=True),
+-            nn.Conv2d(256, 256, kernel_size=3, padding=1),
+-            nn.LeakyReLU(inplace=True)
+-        )
+-
+-        # combine_convs2 的输入通道应当与 x_hr 和 x32_lr 的通道一致（两者都是 64ch）
+-        self.combine_convs2 = nn.Sequential(
+-            nn.Conv2d(64, 128, kernel_size=3, padding=1),  # <-- 改为 64 输入
+-            nn.LeakyReLU(inplace=True),
+-            nn.Conv2d(128, 64, kernel_size=3, padding=1),
+-            nn.LeakyReLU(inplace=True)
+-        )
+-
+-        # 输出层
+-        self.final_conv = nn.Conv2d(1, 1, kernel_size=3, padding=1)
+-
+-        # 初始化权重
+-        self._initialize_weights()
+-
+-    def _create_gaussian_kernel(self, size, sigma):
+-        """创建高斯核（返回 CPU tensor，forward 时再 .to(device)）"""
+-        coords = torch.arange(size, dtype=torch.float32)
+-        coords -= size // 2
+-        y_coords, x_coords = torch.meshgrid(coords, coords, indexing='ij')
+-        kernel = torch.exp(-(x_coords ** 2 + y_coords ** 2) / (2 * sigma ** 2))
+-        kernel /= kernel.sum()
+-        return kernel.view(1, 1, size, size)  # cpu tensor
+-
+-    def _initialize_weights(self):
+-        for m in self.modules():
+-            if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
+-                nn.init.xavier_normal_(m.weight)
+-                if m.bias is not None:
+-                    nn.init.constant_(m.bias, 0)
+-
+-    @staticmethod
+-    def space_to_depth(x, block_size):
+-        """实现 tf.space_to_depth（更健壮的实现）"""
+-        b, c, h, w = x.size()
+-        assert h % block_size == 0 and w % block_size == 0
+-        x = x.view(b, c, h // block_size, block_size, w // block_size, block_size)
+-        x = x.permute(0, 3, 5, 1, 2, 4).contiguous()
+-        x = x.view(b, c * (block_size ** 2), h // block_size, w // block_size)
+-        return x
+-
+-    @staticmethod
+-    def depth_to_space(x, block_size):
+-        """实现 tf.depth_to_space（更直观、可读）"""
+-        b, c, h, w = x.size()
+-        assert c % (block_size ** 2) == 0, "channels must be divisible by block_size^2"
+-        new_c = c // (block_size ** 2)
+-        x = x.view(b, new_c, block_size, block_size, h, w)
+-        # 现在维度 (b, new_c, block_size, block_size, h, w)
+-        x = x.permute(0, 1, 4, 2, 5, 3).contiguous()  # -> (b, new_c, h, block_size, w, block_size)
+-        x = x.view(b, new_c, h * block_size, w * block_size)
+-        return x
+-
+-    def forward(self, x):
+-        """前向传播 - 假定输入 x 是 [B,1,256,256]"""
+-        b, c, h, w = x.shape
+-        assert c == 1 and h == 256 and w == 256, "Input must be grayscale 256x256"
+-
+-        # 高低频分离（把 kernel 发送到输入所在 device）
+-        kernel = self.gaussian_kernel.repeat(c, 1, 1, 1).to(x.device)
+-        img_LR = F.conv2d(x, kernel, padding=5, groups=c)
+-        img_HR = x - img_LR
+-
+-        # LR 路径
+-        x128_lr = F.leaky_relu(self.lr_conv1(img_LR))
+-        x64_lr = F.leaky_relu(self.lr_conv2(x128_lr))
+-        x32_lr = F.leaky_relu(self.lr_conv3(x64_lr))
+-        x16_lr = F.leaky_relu(self.lr_conv4(x32_lr))  # [B,256,16,16]
+-
+-        # 编码器（Transformer）
+-        memory = x16_lr.flatten(2).transpose(1, 2)  # [B, 16*16, 256]
+-        for enc_layer in self.encoder_layers:
+-            memory = enc_layer(memory)  # 使用 EncoderLayer
+-
+-        # HR 路径：先 space_to_depth (block_size=8) -> channels: 1*64 = 64
+-        img_HR_patch = self.space_to_depth(img_HR, block_size=8)  # [B,64,32,32]
+-        x_hrproc = self.hr_process_convs(img_HR_patch)  # [B,256,32,32]
+-
+-        # 解码器
+-        b_hr, c_hr, h_hr, w_hr = x_hrproc.shape
+-        x_flat = x_hrproc.flatten(2).transpose(1, 2)  # [B, h_hr*w_hr, c_hr]
+-        for dec_layer in self.decoder_layers:
+-            x_flat = dec_layer(x_flat, memory)  # 使用 DecoderLayer
+-        x_dec = x_flat.transpose(1, 2).view(b_hr, c_hr, h_hr, w_hr)  # [B,256,32,32]
+-
+-        # 融合与上采样
+-        x_dec_down = F.interpolate(x_dec, size=x16_lr.shape[2:], mode='bilinear', align_corners=False)
+-        fea_16 = x_dec_down + x16_lr  # [B,256,16,16] 注意：x_dec是32->16错位？（下文 align）
+-        # 说明：在你的原代码里 x_dec 的 spatial 与 x16_lr 一致，因为你用的 block / reshape 恰好对齐。
+-        x = self.combine_convs1(fea_16)
+-        x = x + fea_16
+-        x_hr = self.depth_to_space(x, block_size=2)  # 上采样到 32x32，channels -> 256 // 4 = 64
+-
+-        fea_32 = x_hr + x32_lr  # 64-ch + 64-ch
+-        x = self.combine_convs2(fea_32)  # combine_convs2 现在接受 64 通道输入
+-        x = F.relu(x + fea_32)
+-        out = self.depth_to_space(x, block_size=8)  # 上采样到 256x256 (channels -> 64//64 = 1)
+-        out = self.final_conv(out)
+-        return out
+Index: SwinTransCT-main/model.py
+===================================================================
+diff --git a/SwinTransCT-main/model.py b/SwinTransCT-main/model.py
+deleted file mode 100644
+--- a/SwinTransCT-main/model.py	(revision 7a4bc7d60dc78b00aa690a7d9b931c88b34458fb)
++++ /dev/null	(revision 7a4bc7d60dc78b00aa690a7d9b931c88b34458fb)
+@@ -1,376 +0,0 @@
+-import torch
+-import torch.nn as nn
+-import torch.nn.functional as F
+-
+-
+-# --------------------------- 通用模块封装（减少冗余，提升可维护性）---------------------------
+-class ConvBlock(nn.Module):
+-    """通用卷积块：Conv2d + LeakyReLU，支持可选平均池化（减少高频损耗）"""
+-
+-    def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, padding=1, use_pool=False):
+-        super().__init__()
+-        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding)
+-        self.act = nn.LeakyReLU(inplace=True)
+-        self.use_pool = use_pool
+-        self.pool = nn.AvgPool2d(2, stride=2)  # 平均池化替代卷积步长下采样
+-
+-    def forward(self, x):
+-        x = self.act(self.conv(x))
+-        if self.use_pool:
+-            x = self.pool(x)
+-        return x
+-
+-
+-class ResidualConvBlock(nn.Module):
+-    """残差卷积块：2个ConvBlock + 残差连接，增强特征融合能力"""
+-
+-    def __init__(self, channels, kernel_size=3, padding=1):
+-        super().__init__()
+-        # 保证两个 conv 的输入输出通道一致
+-        self.conv1 = ConvBlock(channels, channels, kernel_size, padding=padding)
+-        self.conv2 = ConvBlock(channels, channels, kernel_size, padding=padding)
+-
+-    def forward(self, x):
+-        shortcut = x
+-        x = self.conv1(x)
+-        x = self.conv2(x)
+-        return x + shortcut
+-
+-
+-# --------------------------- Swin-Transformer 基础模块（优化尺寸适配）---------------------------
+-class WindowAttention(nn.Module):
+-    def __init__(self, dim, window_size, num_heads, qkv_bias=True):
+-        super().__init__()
+-        self.dim = dim
+-        self.window_size = window_size  # tuple (H_win, W_win)
+-        self.num_heads = num_heads
+-        self.head_dim = dim // num_heads
+-        self.scale = self.head_dim ** -0.5
+-
+-        # relative position bias table
+-        self.relative_position_bias_table = nn.Parameter(
+-            torch.zeros((2 * window_size[0] - 1) * (2 * window_size[1] - 1), num_heads)
+-        )
+-
+-        coords_h = torch.arange(window_size[0])
+-        coords_w = torch.arange(window_size[1])
+-        coords = torch.stack(torch.meshgrid([coords_h, coords_w], indexing="ij"))  # (2, H_win, W_win)
+-        coords_flatten = torch.flatten(coords, 1)  # (2, N)
+-        relative_coords = coords_flatten[:, :, None] - coords_flatten[:, None, :]  # (2, N, N)
+-        relative_coords = relative_coords.permute(1, 2, 0).contiguous()  # (N, N, 2)
+-        relative_coords[:, :, 0] += window_size[0] - 1
+-        relative_coords[:, :, 1] += window_size[1] - 1
+-        relative_coords[:, :, 0] *= 2 * window_size[1] - 1
+-        relative_position_index = relative_coords.sum(-1)  # (N, N)
+-        self.register_buffer("relative_position_index", relative_position_index)
+-
+-        self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
+-        self.proj = nn.Linear(dim, dim)
+-        nn.init.trunc_normal_(self.relative_position_bias_table, std=.02)
+-        self.softmax = nn.Softmax(dim=-1)
+-
+-    def forward(self, x, mask=None):
+-        B_, N, C = x.shape
+-        qkv = self.qkv(x).reshape(B_, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
+-        q, k, v = qkv.unbind(0)
+-        q = q * self.scale
+-        attn = q @ k.transpose(-2, -1)  # (B_, num_heads, N, N)
+-
+-        relative_position_bias = self.relative_position_bias_table[self.relative_position_index.view(-1)].view(
+-            self.window_size[0] * self.window_size[1],
+-            self.window_size[0] * self.window_size[1],
+-            -1
+-        ).permute(2, 0, 1).contiguous()  # (num_heads, N, N)
+-        attn = attn + relative_position_bias.unsqueeze(0)
+-
+-        if mask is not None:
+-            nW = mask.shape[0]
+-            attn = attn.view(B_ // nW, nW, self.num_heads, N, N) + mask.unsqueeze(1).unsqueeze(0)
+-            attn = attn.view(-1, self.num_heads, N, N)
+-        attn = self.softmax(attn)
+-        x = (attn @ v).transpose(1, 2).reshape(B_, N, C)
+-        x = self.proj(x)
+-        return x
+-
+-
+-class SwinBlock(nn.Module):
+-    def __init__(self, dim, input_resolution, num_heads, window_size=7, shift_size=0):
+-        super().__init__()
+-        self.dim = dim
+-        self.input_resolution = input_resolution
+-        self.num_heads = num_heads
+-        self.shift_size = shift_size
+-
+-        H, W = input_resolution
+-        self.window_size = min(window_size, H, W)
+-        while H % self.window_size != 0 or W % self.window_size != 0:
+-            self.window_size -= 1
+-        if min(H, W) <= self.window_size:
+-            self.shift_size = 0
+-
+-        self.norm1 = nn.LayerNorm(dim)
+-        self.attn = WindowAttention(dim=dim, window_size=(self.window_size, self.window_size), num_heads=num_heads)
+-        self.norm2 = nn.LayerNorm(dim)
+-        self.mlp = nn.Sequential(
+-            nn.Linear(dim, 4 * dim),
+-            nn.GELU(),
+-            nn.Linear(4 * dim, dim)
+-        )
+-
+-        if self.shift_size > 0:
+-            img_mask = torch.zeros((1, H, W, 1))
+-            h_slices = (slice(0, -self.window_size),
+-                        slice(-self.window_size, -self.shift_size),
+-                        slice(-self.shift_size, None))
+-            w_slices = (slice(0, -self.window_size),
+-                        slice(-self.window_size, -self.shift_size),
+-                        slice(-self.shift_size, None))
+-            cnt = 0
+-            for h in h_slices:
+-                for w in w_slices:
+-                    img_mask[:, h, w, :] = cnt
+-                    cnt += 1
+-            mask_windows = self.window_partition(img_mask)
+-            mask_windows = mask_windows.view(-1, self.window_size * self.window_size)
+-            attn_mask = mask_windows.unsqueeze(1) - mask_windows.unsqueeze(2)
+-            attn_mask = attn_mask.masked_fill(attn_mask != 0, float(-100.0)).masked_fill(attn_mask == 0, float(0.0))
+-            self.register_buffer("attn_mask", attn_mask)
+-        else:
+-            self.attn_mask = None
+-
+-    def window_partition(self, x):
+-        B, H, W, C = x.shape
+-        x = x.view(B, H // self.window_size, self.window_size, W // self.window_size, self.window_size, C)
+-        windows = x.permute(0, 1, 3, 2, 4, 5).contiguous().view(-1, self.window_size, self.window_size, C)
+-        return windows
+-
+-    def window_reverse(self, windows, H, W):
+-        nW = H // self.window_size * W // self.window_size
+-        B = int(windows.shape[0] / nW)
+-        x = windows.view(B, H // self.window_size, W // self.window_size, self.window_size, self.window_size, -1)
+-        x = x.permute(0, 1, 3, 2, 4, 5).contiguous().view(B, H, W, -1)
+-        return x
+-
+-    def forward(self, x):
+-        H, W = self.input_resolution
+-        B, L, C = x.shape
+-        assert L == H * W, f"输入序列长度{L}与分辨率{(H, W)}不匹配"
+-
+-        shortcut = x
+-        x = self.norm1(x)
+-        x = x.view(B, H, W, C)
+-        if self.shift_size > 0:
+-            shifted_x = torch.roll(x, shifts=(-self.shift_size, -self.shift_size), dims=(1, 2))
+-        else:
+-            shifted_x = x
+-
+-        x_windows = self.window_partition(shifted_x)
+-        x_windows = x_windows.view(-1, self.window_size * self.window_size, C)
+-        attn_windows = self.attn(x_windows, mask=self.attn_mask)
+-        attn_windows = attn_windows.view(-1, self.window_size, self.window_size, C)
+-        shifted_x = self.window_reverse(attn_windows, H, W)
+-        if self.shift_size > 0:
+-            x = torch.roll(shifted_x, shifts=(self.shift_size, self.shift_size), dims=(1, 2))
+-        else:
+-            x = shifted_x
+-        x = x.view(B, H * W, C)
+-        x = x + shortcut
+-
+-        shortcut = x
+-        x = self.norm2(x)
+-        x = self.mlp(x)
+-        x = x + shortcut
+-
+-        return x
+-
+-
+-# --------------------------- 主模型：LDCTNet_Swin（优化高频保留与参数适配）---------------------------
+-class LDCTNet_Swin(nn.Module):
+-
+-    def _create_gaussian_kernel(self, kernel_size=11, sigma=1.5):
+-        coords = torch.arange(kernel_size, dtype=torch.float32) - (kernel_size - 1) / 2.0
+-        x, y = torch.meshgrid(coords, coords, indexing='ij')
+-        kernel_2d = torch.exp(-(x ** 2 + y ** 2) / (2 * sigma ** 2))
+-        kernel_2d /= kernel_2d.sum()
+-
+-        # 扩展维度为 (1,1,k,k)
+-        kernel_4d = kernel_2d.unsqueeze(0).unsqueeze(0)
+-        return kernel_4d
+-
+-    def _initialize_weights(self):
+-        for m in self.modules():
+-            if isinstance(m, nn.Conv2d):
+-                nn.init.xavier_normal_(m.weight)
+-                if m.bias is not None:
+-                    nn.init.constant_(m.bias, 0.0)
+-
+-    def __init__(self, input_size=(256, 256), base_channels=16, swin_window_size=7, swin_num_heads=8):
+-        super(LDCTNet_Swin, self).__init__()
+-        self.input_size = input_size
+-        self.base_channels = base_channels
+-        self.swin_dim = base_channels * 16  # Swin模块输入通道数（256）
+-        self.swin_input_res = (16, 16)  # Swin模块输入特征图尺寸（16x16）
+-
+-        # 低频路径（下采样 4 次：256→16）
+-        self.lr_path = nn.Sequential(
+-            ConvBlock(1, base_channels * 1, kernel_size=5, padding=2, use_pool=True),  # 256→128
+-            ConvBlock(base_channels * 1, base_channels * 2, kernel_size=5, padding=2, use_pool=True),  # 128→64
+-            ConvBlock(base_channels * 2, base_channels * 4, kernel_size=5, padding=2, use_pool=True),  # 64→32
+-            ConvBlock(base_channels * 4, self.swin_dim, kernel_size=5, padding=2, use_pool=True)  # 32→16
+-        )
+-
+-        # 高频路径（保持一致，最终降采样至16×16）
+-        self.hr_conv1 = ConvBlock(1, base_channels * 4, kernel_size=5, padding=2)
+-        self.hr_conv2 = ConvBlock(base_channels * 4, base_channels * 8, kernel_size=5, padding=2)
+-        self.hr_conv3 = ConvBlock(base_channels * 8, base_channels * 16, kernel_size=5, padding=2)
+-        self.hr_conv4 = ConvBlock(base_channels * 16, self.swin_dim, kernel_size=5, padding=2)
+-
+-        self.hr_pool1 = nn.AvgPool2d(2, stride=2)
+-        self.hr_pool2 = nn.AvgPool2d(2, stride=2)
+-        self.hr_pool3 = nn.AvgPool2d(2, stride=2)
+-        self.hr_pool4 = nn.AvgPool2d(2, stride=2)  # 最终 256→16
+-
+-        # SwinTransformer 编码器和解码器保持不变
+-        self.swin_encoder = nn.ModuleList([
+-            SwinBlock(self.swin_dim, self.swin_input_res, swin_num_heads, swin_window_size, shift_size=0),
+-            SwinBlock(self.swin_dim, self.swin_input_res, swin_num_heads, swin_window_size,
+-                      shift_size=swin_window_size // 2),
+-            SwinBlock(self.swin_dim, self.swin_input_res, swin_num_heads, swin_window_size, shift_size=0)
+-        ])
+-
+-        self.swin_decoder = nn.ModuleList([
+-            SwinBlock(self.swin_dim, self.swin_input_res, swin_num_heads, swin_window_size,
+-                      shift_size=swin_window_size // 2),
+-            SwinBlock(self.swin_dim, self.swin_input_res, swin_num_heads, swin_window_size, shift_size=0),
+-            SwinBlock(self.swin_dim, self.swin_input_res, swin_num_heads, swin_window_size,
+-                      shift_size=swin_window_size // 2)
+-        ])
+-
+-        # 特征融合与上采样模块（从16×16恢复到256×256）
+-        self.combine_block1 = ResidualConvBlock(channels=self.swin_dim)
+-        self.upsample1 = nn.PixelShuffle(2)  # 16→32
+-        self.combine_block2 = ResidualConvBlock(channels=base_channels * 4)
+-        self.upsample2 = nn.PixelShuffle(4)  # 32→256
+-        self.final_conv = nn.Conv2d(base_channels * 4, 1, kernel_size=3, stride=1, padding=1)
+-
+-        self._initialize_weights()
+-        self.gaussian_kernel = self._create_gaussian_kernel(kernel_size=11, sigma=1.5)
+-        self.register_buffer("gaussian_kernel_buf", self.gaussian_kernel, persistent=False)
+-
+-        # ---------- LR path: 改为 ModuleList，便于拿到中间尺度特征 ----------
+-        # 512 -> 256 -> 128 -> 64 -> 32
+-        self.lr_blocks = nn.ModuleList([
+-            ConvBlock(1, base_channels * 1, kernel_size=5, padding=2, use_pool=True),  # -> 256x256, C=16
+-            ConvBlock(base_channels * 1, base_channels * 2, kernel_size=5, padding=2, use_pool=True),  # ->128x128, C=32
+-            ConvBlock(base_channels * 2, base_channels * 4, kernel_size=5, padding=2, use_pool=True),  # ->64x64, C=64
+-            ConvBlock(base_channels * 4, self.swin_dim, kernel_size=5, padding=2, use_pool=True)  # ->32x32, C=256
+-        ])
+-
+-        # ---------- HR path: 修改为 clear 的 conv+pool 流程 ----------
+-        self.hr_conv1 = ConvBlock(1, base_channels * 4, kernel_size=5, padding=2)  # (B,64,512,512)
+-        self.hr_pool1 = nn.AvgPool2d(2, stride=2)  # ->256
+-        self.hr_conv2 = ConvBlock(base_channels * 4, base_channels * 8, kernel_size=5, padding=2)  # (B,128,256,256)
+-        self.hr_pool2 = nn.AvgPool2d(2, stride=2)  # ->128
+-        self.hr_conv3 = ConvBlock(base_channels * 8, base_channels * 16, kernel_size=5, padding=2)  # (B,256,128,128)
+-        self.hr_pool3 = nn.AvgPool2d(2, stride=2)  # ->64
+-        self.hr_conv4 = ConvBlock(base_channels * 16, self.swin_dim, kernel_size=5, padding=2)  # (B,256,64,64)
+-        self.hr_pool4 = nn.AvgPool2d(2, stride=2)  # ->32
+-
+-        # ---------- Swin Encoder / Decoder ----------
+-        self.swin_encoder = nn.ModuleList([
+-            SwinBlock(dim=self.swin_dim, input_resolution=self.swin_input_res, num_heads=swin_num_heads,
+-                      window_size=swin_window_size, shift_size=0),
+-            SwinBlock(dim=self.swin_dim, input_resolution=self.swin_input_res, num_heads=swin_num_heads,
+-                      window_size=swin_window_size, shift_size=swin_window_size // 2),
+-            SwinBlock(dim=self.swin_dim, input_resolution=self.swin_input_res, num_heads=swin_num_heads,
+-                      window_size=swin_window_size, shift_size=0)
+-        ])
+-
+-        self.swin_decoder = nn.ModuleList([
+-            SwinBlock(dim=self.swin_dim, input_resolution=self.swin_input_res, num_heads=swin_num_heads,
+-                      window_size=swin_window_size, shift_size=swin_window_size // 2),
+-            SwinBlock(dim=self.swin_dim, input_resolution=self.swin_input_res, num_heads=swin_num_heads,
+-                      window_size=swin_window_size, shift_size=0),
+-            SwinBlock(dim=self.swin_dim, input_resolution=self.swin_input_res, num_heads=swin_num_heads,
+-                      window_size=swin_window_size, shift_size=swin_window_size // 2)
+-        ])
+-
+-        # 特征融合与上采样
+-        self.combine_block1 = ResidualConvBlock(channels=self.swin_dim)  # work on 256-ch (32x32)
+-        # 第一次上采样：PixelShuffle(2) 需要 in_channels = out_channels * (2^2)
+-        # 我们的 in_channels = 256 -> out_channels = 256/4 = 64, H/W: 32->64
+-        self.upsample1 = nn.PixelShuffle(2)
+-
+-        # combine_block2 operates on 64 channels at 64x64
+-        self.combine_block2 = ResidualConvBlock(channels=base_channels * 4)  # channels=64
+-
+-        # 第二次上采样：PixelShuffle(8) 需要 in_channels = out_channels * (8^2)
+-        # 我们希望最终 out_channels=1 -> in_channels must be 64 (=1*64) -> matches combine_block2 out channels
+-        self.upsample2 = nn.PixelShuffle(8)
+-
+-        # final conv: after upsample2, channels will be 1, 所以 final_conv 输入应为 1
+-        self.final_conv = nn.Conv2d(1, 1, kernel_size=3, stride=1, padding=1)
+-
+-        self._initialize_weights()
+-
+-    def forward(self, x):
+-        """
+-        x: (B,1,H,W) assumed H=W=512
+-        returns out: (B,1,H,W)
+-        """
+-        # 1. 高低频分离
+-        img_LR = F.conv2d(x, self.gaussian_kernel_buf.to(x.device), padding=5)  # (B,1,512,512)
+-        img_HR = x - img_LR
+-
+-        # 2. LR path: 逐层计算并保存 64x64 的中间特征
+-        lr = img_LR
+-        lr_feats = []
+-        for idx, blk in enumerate(self.lr_blocks):
+-            lr = blk(lr)
+-            lr_feats.append(
+-                lr)  # lr_feats[0]: 256x256 (C=16); lr_feats[1]:128x128(C=32); lr_feats[2]:64x64(C=64); lr_feats[3]:32x32(C=256)
+-        x_lr_32 = lr_feats[-1]  # (B,256,32,32)
+-        x_lr_64 = lr_feats[-2]  # (B,64,64,64)  <-- 用于中间融合
+-
+-        # 3. HR path: 清晰且正确的下采样序列
+-        x_hr = self.hr_conv1(img_HR)  # (B,64,512,512)
+-        x_hr = self.hr_pool1(x_hr)  # (B,64,256,256)
+-        x_hr = self.hr_conv2(x_hr)  # (B,128,256,256)
+-        x_hr = self.hr_pool2(x_hr)  # (B,128,128,128)
+-        x_hr = self.hr_conv3(x_hr)  # (B,256,128,128)
+-        x_hr = self.hr_pool3(x_hr)  # (B,256,64,64)
+-        x_hr = self.hr_conv4(x_hr)  # (B,256,64,64)
+-        x_hr = self.hr_pool4(x_hr)  # (B,256,32,32)  final HR feature map to feed Swin decoder
+-
+-        # 4. Swin Encoder on low-frequency feature x_lr_32 (B,256,32,32)
+-        B, C, H, W = x_lr_32.shape
+-        x_swin = x_lr_32.flatten(2).transpose(1, 2)  # (B, H*W, C)
+-        for blk in self.swin_encoder:
+-            x_swin = blk(x_swin)
+-        x_swin_enc = x_swin.transpose(1, 2).view(B, C, H, W)  # (B,256,32,32)
+-
+-        # 5. Swin Decoder: 把 HR 特征与 Encoder 输出融合（以序列形式）
+-        x_swin_hr = x_hr.flatten(2).transpose(1, 2)  # (B, H*W, C)
+-        x_swin_enc_seq = x_swin_enc.flatten(2).transpose(1, 2)
+-        x_swin = x_swin_hr + x_swin_enc_seq
+-        for blk in self.swin_decoder:
+-            x_swin = blk(x_swin)
+-        x_swin_dec = x_swin.transpose(1, 2).view(B, C, H, W)  # (B,256,32,32)
+-
+-        # 6. 特征融合与上采样
+-        x_fuse = x_swin_dec + x_lr_32  # (B,256,32,32)
+-        x_fuse = self.combine_block1(x_fuse)  # (B,256,32,32)
+-
+-        # 第一次上采样：32x32 -> 64x64, channels 256 -> 64 (PixelShuffle(2))
+-        x_up1 = self.upsample1(x_fuse)  # (B,64,64,64)
+-
+-        # 与 lr_path 的 64x64 特征融合（更合理的 skip）
+-        x_fuse2 = x_up1 + x_lr_64  # (B,64,64,64)
+-        x_fuse2 = self.combine_block2(x_fuse2)  # (B,64,64,64)
+-
+-        # 第二次上采样：16x16 -> 256x256, channels 64 -> 1 (PixelShuffle(8))
+-        x_up2 = self.upsample2(x_fuse2)  # (B,1,256,256)
+-
+-        # 最终卷积：通道 1 -> 1
+-        out = self.final_conv(x_up2)  # (B,1,512,512)
+-        return out
+Index: SwinTransCT-main/change_Radom.py
+===================================================================
+diff --git a/SwinTransCT-main/change_Radom.py b/SwinTransCT-main/change_Radom.py
+deleted file mode 100644
+--- a/SwinTransCT-main/change_Radom.py	(revision 7a4bc7d60dc78b00aa690a7d9b931c88b34458fb)
++++ /dev/null	(revision 7a4bc7d60dc78b00aa690a7d9b931c88b34458fb)
+@@ -1,174 +0,0 @@
+-import os
+-
+-import cv2
+-import h5py
+-import numpy as np
+-from tqdm import tqdm  # 进度条显示
+-
+-# --------------------------
+-# 1. 配置参数（根据需求调整）
+-# --------------------------
+-HDF5_FOLDER = "/Users/lxxxx/Desktop/CODE/SwinCT/ground_truth_test"  # 替换为你的28个HDF5文件所在文件夹
+-OUTPUT_FOLDER = "/Users/lxxxx/Desktop/CODE/SwinCT/ND_LD_Paired_Data"  # 输出配对数据的根文件夹
+-OCCLUSION_RATE = 0.5  # 遮挡率（0.5=50%剂量降低，可调整为0.3/0.7等）
+-NOISE_STD = 0.03  # 低剂量噪声强度（剂量越低，噪声越大，建议0.02-0.05）
+-HOLE_SIZE = (5, 5)  # 挡板孔洞大小（像素），模拟物理挡板尺寸
+-CT_WINDOW = (40, 400)  # CT窗宽窗位（软组织窗：中心40，宽度400，可按需调整）
+-IMAGE_SIZE = (256, 256)  # 输出图像尺寸（适配神经网络，可改为512/128等）
+-
+-# 创建输出文件夹（ND和LD分开存储）
+-nd_output_dir = os.path.join(OUTPUT_FOLDER, "ND")
+-ld_output_dir = os.path.join(OUTPUT_FOLDER, "LD")
+-os.makedirs(nd_output_dir, exist_ok=True)
+-os.makedirs(ld_output_dir, exist_ok=True)
+-
+-
+-# --------------------------
+-# 2. 工具函数（CT窗处理、挡板模拟、批量读取）
+-# --------------------------
+-def set_ct_window(img_hu, window_center, window_width):
+-    """归一化数据无需窗处理，直接返回（避免裁剪为空白）"""
+-    # 若数据是 0~1：直接归一化到0~1（保持不变）
+-    if img_hu.max() <= 1.0 and img_hu.min() >= 0.0:
+-        return np.clip(img_hu, 0.0, 1.0)
+-    # 若数据是 -1~1：映射到0~1
+-    elif img_hu.max() <= 1.0 and img_hu.min() >= -1.0:
+-        return (img_hu + 1.0) / 2.0  # -1→0，1→1
+-    # 若还是HU值，按原窗处理
+-    else:
+-        min_val = window_center - window_width / 2
+-        max_val = window_center + window_width / 2
+-        img_windowed = np.clip(img_hu, min_val, max_val)
+-        img_windowed = (img_windowed - min_val) / (max_val - min_val)
+-        return img_windowed
+-
+-
+-def generate_random_mask(height, width, occlusion_rate, hole_size):
+-    """生成随机挡板模板（适配单张图像尺寸）"""
+-    # 基础随机二进制模板（0=遮挡，1=通透）
+-    np.random.seed(None)  # 不固定种子，每张图挡板分布不同（增强泛化性）
+-    mask = np.random.choice([0, 1], size=(height, width), p=[occlusion_rate, 1 - occlusion_rate])
+-    mask = mask.astype(np.uint8)
+-    # 形态学处理：平滑孔洞，模拟真实挡板
+-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, hole_size)
+-    mask = cv2.dilate(mask, kernel)
+-    mask = cv2.erode(mask, kernel)
+-    return mask.astype(np.float32)
+-
+-
+-def simulate_low_dose_ct(nd_img_hu, mask, noise_std):
+-    """将标准剂量CT（HU值）模拟为低剂量CT（挡板+噪声）"""
+-    # 步骤1：CT窗处理（转为0-1的灰度图）
+-    nd_img_norm = set_ct_window(nd_img_hu, *CT_WINDOW)
+-    # 步骤2：挡板遮挡（模拟稀疏信号）
+-    sparse_img = nd_img_norm * mask
+-    # 步骤3：添加低剂量统计噪声
+-    noise = np.random.normal(0, noise_std, size=nd_img_norm.shape)
+-    ld_img_norm = sparse_img + noise
+-    # 步骤4：裁剪溢出值，确保0-1范围
+-    ld_img_norm = np.clip(ld_img_norm, 0.0, 1.0)
+-    # 步骤5：轻微平滑（模拟低剂量CT的噪声特性，可选）
+-    ld_img_norm = cv2.GaussianBlur(ld_img_norm, (3, 3), sigmaX=0.8)
+-    return nd_img_norm, ld_img_norm
+-
+-
+-def read_hdf5_ct_images(hdf5_path):
+-    """读取单个HDF5文件中的所有128张NDCT图像（HU值）"""
+-    ct_images_hu = []
+-    with h5py.File(hdf5_path, "r") as f:
+-        # --------------------------
+-        # 关键：根据你的HDF5结构修改路径！
+-        # 假设CT图像（HU值）存储在 "/reconstructed_images" 或 "/ct_images" 路径下
+-        # 若不确定，先运行之前的HDF5结构遍历代码确认！
+-        # --------------------------
+-        # 示例1：如果图像存储在分组下的数据集（常见科研结构）
+-        if "/data" in f:
+-            img_dataset = f["/data"]
+-        elif "/ct_images" in f:
+-            img_dataset = f["/ct_images"]
+-        elif "/images" in f:
+-            img_dataset = f["/images"]
+-        else:
+-            raise ValueError(f"HDF5文件 {hdf5_path} 中未找到CT图像数据集！请确认路径。")
+-
+-        # 读取所有图像（假设数据集形状为 (128, H, W) → (数量, 高度, 宽度)）
+-        if img_dataset.shape[0] == 128:
+-            ct_images_hu = img_dataset[:]  # (128, H, W)
+-        else:
+-            # 若形状为 (H, W, 128)，转置为 (128, H, W)
+-            ct_images_hu = np.transpose(img_dataset, (2, 0, 1))
+-
+-        # 新增：打印数据的数值范围（关键！）
+-        print(f"\n{os.path.basename(hdf5_path)} 数据范围：")
+-        print(f"最小值：{ct_images_hu.min():.2f} | 最大值：{ct_images_hu.max():.2f}")
+-        print(f"平均值：{ct_images_hu.mean():.2f}")
+-
+-        # 确保数据是HU值（若HDF5存储的是归一化后的数据，需注释以下校准步骤）
+-        # 假设HDF5中存储了校准参数（斜率/截距），若没有则手动设置（如 slope=1, intercept=-1024）
+-        if "rescale_slope" in img_dataset.attrs and "rescale_intercept" in img_dataset.attrs:
+-            slope = img_dataset.attrs["rescale_slope"]
+-            intercept = img_dataset.attrs["rescale_intercept"]
+-            ct_images_hu = ct_images_hu * slope + intercept  # 转换为HU值
+-
+-    return ct_images_hu
+-
+-
+-# --------------------------
+-# 3. 批量处理主流程
+-# --------------------------
+-def batch_process_hdf5_to_paired_nd_ld():
+-    # 获取所有HDF5文件（按文件名排序，确保顺序一致）
+-    hdf5_files = [f for f in os.listdir(HDF5_FOLDER) if f.endswith(".h5") or f.endswith(".hdf5")]
+-    hdf5_files.sort()  # 排序，避免处理顺序混乱
+-    print(f"找到 {len(hdf5_files)} 个HDF5文件，开始批量处理...")
+-
+-    total_img_count = 0  # 统计总图像数（28×128=3584张）
+-
+-    # 遍历每个HDF5文件
+-    for hdf5_idx, hdf5_file in enumerate(hdf5_files):
+-        hdf5_path = os.path.join(HDF5_FOLDER, hdf5_file)
+-        print(f"\n处理第 {hdf5_idx + 1}/{len(hdf5_files)} 个文件：{hdf5_file}")
+-
+-        # 读取当前HDF5中的128张CT图像（HU值）
+-        try:
+-            ct_images_hu = read_hdf5_ct_images(hdf5_path)
+-            assert len(ct_images_hu) == 128, f"该HDF5文件仅包含 {len(ct_images_hu)} 张图像，不符合128张要求！"
+-        except Exception as e:
+-            print(f"警告：读取 {hdf5_file} 失败！错误：{str(e)}，跳过该文件。")
+-            continue
+-
+-        # 遍历当前HDF5中的每张图像
+-        for img_idx, img_hu in tqdm(enumerate(ct_images_hu), total=128, desc="处理图像"):
+-            # 生成当前图像的专属随机挡板模板（每张图挡板不同）
+-            mask = generate_random_mask(img_hu.shape[0], img_hu.shape[1], OCCLUSION_RATE, HOLE_SIZE)
+-
+-            # 模拟低剂量CT
+-            nd_img_norm, ld_img_norm = simulate_low_dose_ct(img_hu, mask, NOISE_STD)
+-
+-            # 调整图像尺寸（适配神经网络）
+-            nd_img_resized = cv2.resize(nd_img_norm, IMAGE_SIZE)
+-            ld_img_resized = cv2.resize(ld_img_norm, IMAGE_SIZE)
+-
+-            # 生成配对文件名（格式：nd_0001.png, ld_0001.png，按总计数排序）
+-            total_img_count += 1
+-            img_filename = f"{total_img_count:04d}.png"  # 4位数字编号（0001~3584）
+-            nd_save_path = os.path.join(nd_output_dir, img_filename)
+-            ld_save_path = os.path.join(ld_output_dir, img_filename)
+-
+-            # 转换为8位灰度图（0-255）并保存
+-            nd_img_uint8 = (nd_img_resized * 255).astype(np.uint8)
+-            ld_img_uint8 = (ld_img_resized * 255).astype(np.uint8)
+-            cv2.imwrite(nd_save_path, nd_img_uint8)
+-            cv2.imwrite(ld_save_path, ld_img_uint8)
+-
+-    print(f"\n批量处理完成！")
+-    print(f"总生成配对图像数：{total_img_count} 对（ND和LD各 {total_img_count} 张）")
+-    print(f"ND图像路径：{nd_output_dir}")
+-    print(f"LD图像路径：{ld_output_dir}")
+-
+-
+-# --------------------------
+-# 4. 执行批量处理
+-# --------------------------
+-if __name__ == "__main__":
+-    batch_process_hdf5_to_paired_nd_ld()
+Index: SwinTransCT-main/model_improve.py
+===================================================================
+diff --git a/SwinTransCT-main/model_improve.py b/SwinTransCT-main/model_improve.py
+deleted file mode 100644
+--- a/SwinTransCT-main/model_improve.py	(revision 7a4bc7d60dc78b00aa690a7d9b931c88b34458fb)
++++ /dev/null	(revision 7a4bc7d60dc78b00aa690a7d9b931c88b34458fb)
+@@ -1,206 +0,0 @@
+-import torch
+-import torch.nn as nn
+-import torch.nn.functional as F
+-
+-
+-# ======================
+-# ConvBlock 增加 InstanceNorm2d
+-# ======================
+-class ConvBlock(nn.Module):
+-    def __init__(self, in_ch, out_ch, pool=False):
+-        super().__init__()
+-        self.pool = pool
+-        self.conv = nn.Sequential(
+-            nn.Conv2d(in_ch, out_ch, kernel_size=3, padding=1),
+-            nn.InstanceNorm2d(out_ch),  # ✅ 加入 InstanceNorm
+-            nn.LeakyReLU(0.2, inplace=True)
+-        )
+-        if pool:
+-            self.avgpool = nn.AvgPool2d(2, 2)
+-
+-    def forward(self, x):
+-        x = self.conv(x)
+-        if self.pool:
+-            x = self.avgpool(x)
+-        return x
+-
+-
+-# ======================
+-# ResidualConvBlock 同样加入 InstanceNorm
+-# ======================
+-class ResidualConvBlock(nn.Module):
+-    def __init__(self, channels):
+-        super().__init__()
+-        self.block = nn.Sequential(
+-            nn.Conv2d(channels, channels, kernel_size=3, padding=1),
+-            nn.InstanceNorm2d(channels),
+-            nn.LeakyReLU(0.2, inplace=True),
+-            nn.Conv2d(channels, channels, kernel_size=3, padding=1),
+-            nn.InstanceNorm2d(channels)
+-        )
+-
+-    def forward(self, x):
+-        return x + self.block(x)
+-
+-
+-# ======================
+-# 可学习高斯卷积模块 (替代固定高斯核)
+-# ======================
+-class LearnableGaussianBlur(nn.Module):
+-    """可学习的高斯滤波器，用Conv2d实现并初始化为高斯权重"""
+-
+-    def __init__(self, channels=1, kernel_size=5, sigma=1.5):
+-        super().__init__()
+-        self.kernel_size = kernel_size
+-        self.sigma = sigma
+-
+-        self.conv = nn.Conv2d(
+-            in_channels=channels,
+-            out_channels=channels,
+-            kernel_size=kernel_size,
+-            padding=kernel_size // 2,
+-            groups=channels,  # depthwise
+-            bias=False
+-        )
+-        self._init_gaussian_weights()
+-
+-    def _init_gaussian_weights(self):
+-        """初始化为固定高斯核"""
+-        k = self.kernel_size
+-        sigma = self.sigma
+-        coords = torch.arange(k) - k // 2
+-        x_grid, y_grid = torch.meshgrid(coords, coords, indexing="xy")
+-        g = torch.exp(-(x_grid ** 2 + y_grid ** 2) / (2 * sigma ** 2))
+-        g = g / g.sum()
+-        weight = g.view(1, 1, k, k).repeat(self.conv.out_channels, 1, 1, 1)
+-        with torch.no_grad():
+-            self.conv.weight.copy_(weight)
+-
+-    def forward(self, x):
+-        return self.conv(x)
+-
+-
+-# ======================
+-# Swin Attention Block（略，保持原实现）
+-# ======================
+-class WindowAttention(nn.Module):
+-    def __init__(self, dim, window_size=4, num_heads=4):
+-        super().__init__()
+-        self.num_heads = num_heads
+-        self.scale = (dim // num_heads) ** -0.5
+-        self.qkv = nn.Linear(dim, dim * 3)
+-        self.proj = nn.Linear(dim, dim)
+-        self.window_size = window_size
+-
+-    def forward(self, x):
+-        B, N, C = x.shape
+-        qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads)
+-        q, k, v = qkv[:, :, 0], qkv[:, :, 1], qkv[:, :, 2]
+-        attn = (q @ k.transpose(-2, -1)) * self.scale
+-        attn = attn.softmax(dim=-1)
+-        x = (attn @ v).transpose(1, 2).reshape(B, N, C)
+-        x = self.proj(x)
+-        return x
+-
+-
+-# SwinBlock 同样保持原有功能
+-class SwinBlock(nn.Module):
+-    def __init__(self, dim, num_heads, window_size=4):
+-        super().__init__()
+-        self.attn = WindowAttention(dim, window_size, num_heads)
+-        self.norm1 = nn.LayerNorm(dim)
+-        self.mlp = nn.Sequential(
+-            nn.Linear(dim, dim * 4),
+-            nn.GELU(),
+-            nn.Linear(dim * 4, dim)
+-        )
+-        self.norm2 = nn.LayerNorm(dim)
+-
+-    def forward(self, x):
+-        x = x + self.attn(self.norm1(x))
+-        x = x + self.mlp(self.norm2(x))
+-        return x
+-
+-
+-# ======================
+-# 主网络结构 (LDCTNet_Swin)
+-# ======================
+-class LDCTNet_Swin_improve(nn.Module):
+-    def __init__(self):
+-        super().__init__()
+-
+-        # --- 可学习高斯核 ---
+-        self.gaussian = LearnableGaussianBlur(channels=1, kernel_size=5, sigma=1.5)
+-
+-        # --- 高频与低频路径 ---
+-        self.conv_hr1 = ConvBlock(1, 64, pool=True)
+-        self.conv_hr2 = ConvBlock(64, 128, pool=True)
+-        self.conv_hr3 = ConvBlock(128, 256, pool=True)
+-        self.conv_hr4 = ConvBlock(256, 256, pool=True)
+-
+-        self.conv_lr1 = ConvBlock(1, 64, pool=True)
+-        self.conv_lr2 = ConvBlock(64, 128, pool=True)
+-        self.conv_lr3 = ConvBlock(128, 256, pool=True)
+-        self.conv_lr4 = ConvBlock(256, 256, pool=True)
+-
+-        # --- Swin Transformer 主干 ---
+-        self.swin_enc1 = SwinBlock(256, num_heads=4, window_size=4)
+-        self.swin_enc2 = SwinBlock(256, num_heads=4, window_size=4)
+-        self.swin_enc3 = SwinBlock(256, num_heads=4, window_size=4)
+-
+-        self.swin_dec1 = SwinBlock(256, num_heads=4, window_size=4)
+-        self.swin_dec2 = SwinBlock(256, num_heads=4, window_size=4)
+-        self.swin_dec3 = SwinBlock(256, num_heads=4, window_size=4)
+-
+-        # --- 融合与上采样 ---
+-        self.res_fuse = ResidualConvBlock(256)
+-        self.upsample1 = nn.Sequential(
+-            nn.PixelShuffle(2),
+-            nn.Conv2d(64, 64, 3, 1, 1),
+-            nn.LeakyReLU(inplace=True)
+-        )
+-        self.upsample2 = nn.Sequential(
+-            nn.PixelShuffle(2),
+-            nn.Conv2d(16, 16, 3, 1, 1),
+-            nn.LeakyReLU(inplace=True)
+-        )
+-        self.upsample3 = nn.Sequential(
+-            nn.PixelShuffle(2),
+-            nn.Conv2d(4, 4, 3, 1, 1),
+-            nn.LeakyReLU(inplace=True)
+-        )
+-
+-        self.final_conv = nn.Conv2d(4, 1, 3, 1, 1)
+-        self.out_act = nn.Sigmoid()
+-
+-    def forward(self, x):
+-        # ------------------- 高低频分离 -------------------
+-        x_low = self.gaussian(x)  # 低频
+-        x_high = x - x_low  # 高频
+-
+-        # ------------------- HR/LR 特征提取 -------------------
+-        x_hr = self.conv_hr4(self.conv_hr3(self.conv_hr2(self.conv_hr1(x_high))))
+-        x_lr = self.conv_lr4(self.conv_lr3(self.conv_lr2(self.conv_lr1(x_low))))
+-
+-        # ------------------- Swin Transformer 编码解码 -------------------
+-        B, C, H, W = x_lr.shape
+-        x_flat = x_lr.flatten(2).transpose(1, 2)  # (B, N, C)
+-        x_enc = self.swin_enc3(self.swin_enc2(self.swin_enc1(x_flat)))
+-        x_dec = self.swin_dec3(self.swin_dec2(self.swin_dec1(x_enc)))
+-        x_dec = x_dec.transpose(1, 2).reshape(B, C, H, W)
+-
+-        # ------------------- 融合 -------------------
+-        fea_fused = self.res_fuse(x_dec + x_hr)
+-
+-        # ------------------- 上采样 PixelShuffle 3 次 -------------------
+-        # fea_fused 假设 [B,256,16,16]
+-        x = self.upsample1(fea_fused)  # -> [B,64,32,32]
+-        x = self.upsample2(x)  # -> [B,16,64,64]
+-        x = self.upsample3(x)  # -> [B,4,128,128]
+-
+-        # ------------------- 最终输出到256x256 -------------------
+-        x = F.interpolate(x, size=(256, 256), mode='bilinear', align_corners=False)
+-        x = self.final_conv(x)  # -> [B,1,256,256]
+-
+-        # ------------------- 输出激活 -------------------
+-        return self.out_act(x)
+Index: SwinTransCT-main/loss.py
+===================================================================
+diff --git a/SwinTransCT-main/loss.py b/SwinTransCT-main/loss.py
+deleted file mode 100644
+--- a/SwinTransCT-main/loss.py	(revision 7a4bc7d60dc78b00aa690a7d9b931c88b34458fb)
++++ /dev/null	(revision 7a4bc7d60dc78b00aa690a7d9b931c88b34458fb)
+@@ -1,68 +0,0 @@
+-import torch
+-import torch.nn as nn
+-import torch.nn.functional as F
+-
+-
+-class HybridLoss(nn.Module):
+-    """
+-    Hybrid Loss for CT reconstruction:
+-    L = 0.7*L1 + 0.2*(1-SSIM) + 0.1*EdgeLoss
+-    输入输出尺寸: [B, 1, H, W]
+-    """
+-
+-    def __init__(self, alpha=0.7, beta=0.2, gamma=0.1,
+-                 window_size=11, window_sigma=1.5, device='cuda'):
+-        super(HybridLoss, self).__init__()
+-        self.alpha = alpha
+-        self.beta = beta
+-        self.gamma = gamma
+-        self.window_size = window_size
+-        self.device = device
+-
+-        # 高斯卷积核，用于 SSIM
+-        self.gaussian_kernel = self.create_gaussian_kernel(window_size, window_sigma).to(device)
+-
+-        # Sobel 卷积核，用于 Edge Loss
+-        self.sobel_x = torch.tensor([[1, 0, -1], [2, 0, -2], [1, 0, -1]], dtype=torch.float32, device=device).view(1, 1,
+-                                                                                                                   3, 3)
+-        self.sobel_y = torch.tensor([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], dtype=torch.float32, device=device).view(1, 1,
+-                                                                                                                   3, 3)
+-
+-    def create_gaussian_kernel(self, size, sigma):
+-        coords = torch.arange(size, dtype=torch.float32) - size // 2
+-        g = torch.exp(-(coords ** 2) / (2 * sigma ** 2))
+-        g = g / g.sum()
+-        kernel_2d = g[:, None] @ g[None, :]  # 外积得到 2D
+-        kernel_2d = kernel_2d.unsqueeze(0).unsqueeze(0)  # [1,1,H,W]
+-        return kernel_2d
+-
+-    def ssim(self, img1, img2, C1=1e-4, C2=9e-4):
+-        """计算 SSIM，输入 [B,1,H,W]"""
+-        mu1 = F.conv2d(img1, self.gaussian_kernel, padding=self.window_size // 2)
+-        mu2 = F.conv2d(img2, self.gaussian_kernel, padding=self.window_size // 2)
+-        mu1_sq = mu1 ** 2
+-        mu2_sq = mu2 ** 2
+-        mu1_mu2 = mu1 * mu2
+-
+-        sigma1_sq = F.conv2d(img1 * img1, self.gaussian_kernel, padding=self.window_size // 2) - mu1_sq
+-        sigma2_sq = F.conv2d(img2 * img2, self.gaussian_kernel, padding=self.window_size // 2) - mu2_sq
+-        sigma12 = F.conv2d(img1 * img2, self.gaussian_kernel, padding=self.window_size // 2) - mu1_mu2
+-
+-        ssim_map = ((2 * mu1_mu2 + C1) * (2 * sigma12 + C2)) / ((mu1_sq + mu2_sq + C1) * (sigma1_sq + sigma2_sq + C2))
+-        return ssim_map.mean()
+-
+-    def edge_loss(self, pred, target):
+-        """基于 Sobel 边缘的 L1 损失"""
+-        gx_pred = F.conv2d(pred, self.sobel_x, padding=1)
+-        gy_pred = F.conv2d(pred, self.sobel_y, padding=1)
+-        gx_target = F.conv2d(target, self.sobel_x, padding=1)
+-        gy_target = F.conv2d(target, self.sobel_y, padding=1)
+-        loss = F.l1_loss(gx_pred, gx_target) + F.l1_loss(gy_pred, gy_target)
+-        return loss
+-
+-    def forward(self, pred, target):
+-        l1 = F.l1_loss(pred, target)
+-        ssim_loss = 1 - self.ssim(pred, target)
+-        edge = self.edge_loss(pred, target)
+-        loss = self.alpha * l1 + self.beta * ssim_loss + self.gamma * edge
+-        return loss
+Index: SwinTransCT-main/train.py
+===================================================================
+diff --git a/SwinTransCT-main/train.py b/SwinTransCT-main/train.py
+deleted file mode 100644
+--- a/SwinTransCT-main/train.py	(revision 7a4bc7d60dc78b00aa690a7d9b931c88b34458fb)
++++ /dev/null	(revision 7a4bc7d60dc78b00aa690a7d9b931c88b34458fb)
+@@ -1,458 +0,0 @@
+-import argparse
+-import os
+-import random
+-
+-import numpy as np
+-import torch
+-import torch.optim as optim
+-from torch.utils.data import DataLoader
+-from torch.utils.tensorboard import SummaryWriter
+-from tqdm import tqdm
+-
+-from Trans_model import LDCTNet256  # 你的LDCTNet_Swin模型
+-from dataset import CTDataset, get_pair_list  # 我的数据集类
+-# 导入自定义模块（确保路径正确，若报错需调整导入路径）
+-from loss import HybridLoss
+-from utils import ImageMetrics  # 指标计算模块（PSNR/SSIM/RMSE）
+-from utils import TrainingRecorder  # 指标计算模块（PSNR/SSIM/RMSE）
+-
+-torch.manual_seed(0)
+-np.random.seed(0)
+-random.seed(0)
+-
+-
+-def save_image_grid(ld_img, nd_img, output_img, save_path, epoch):
+-    """
+-    保存一行3列的图像对比图（仅取第一个样本，避免多样本干扰）
+-    布局：低剂量输入 → 正常剂量标签 → 模型输出
+-    Args:
+-        ld_img: 低剂量CT输入 [B,1,H,W]
+-        nd_img: 正常剂量CT标签 [B,1,H,W]
+-        output_img: 模型输出 [B,1,H,W]
+-        save_path: 图像保存目录
+-        epoch: 当前epoch编号
+-    """
+-    # 创建保存目录
+-    os.makedirs(save_path, exist_ok=True)
+-
+-    # 图像归一化到[0,1]（按单个样本归一化，保证亮度均衡）
+-    def normalize(img):
+-        img = img.detach().cpu()
+-        img_min = img.min()
+-        img_max = img.max()
+-        return (img - img_min) / (img_max - img_min + 1e-8)  # 避免除零
+-
+-    # 只取第一个样本（[B,1,H,W] → [1,H,W]），避免多样本混乱
+-    ld_sample = ld_img[0:1]  # 取第一个样本，保持[1,1,H,W]格式
+-    nd_sample = nd_img[0:1]
+-    output_sample = output_img[0:1]
+-
+-    # 归一化
+-    ld_norm = normalize(ld_sample)
+-    nd_norm = normalize(nd_sample)
+-    output_norm = normalize(output_sample)
+-
+-    # 拼接为一行3列：低剂量（左）→ 正常剂量（中）→ 模型输出（右）
+-    # 按水平方向（dim=3）拼接，最终形状：[1,1,H, 3*W]
+-    comparison_img = torch.cat([ld_norm, nd_norm, output_norm], dim=3)
+-
+-    # 转换为PIL图像（适配保存）
+-    from PIL import Image
+-    # 处理维度：[1,1,H,3W] → [H,3W]（去掉批量和通道维度）
+-    img_np = comparison_img.squeeze(0).squeeze(0).numpy()
+-    img_np = (img_np * 255).astype(np.uint8)  # [0,1] → [0,255]
+-
+-    # 保存文件（文件名含epoch，便于按顺序查看）
+-    save_filename = f"epoch_{epoch:03d}_comparison.png"  # 03d补零（如005、010）
+-    save_filepath = os.path.join(save_path, save_filename)
+-    Image.fromarray(img_np, mode='L').save(save_filepath)  # mode='L'：灰度图格式
+-
+-    # 打印保存日志
+-    print(f"[图像保存] 一行三列对比图已保存：{save_filepath}")
+-    print(f"[图像布局] 左：低剂量输入 | 中：正常剂量标签 | 右：模型输出")
+-
+-
+-def train_one_epoch(model, train_loader, criterion, optimizer, metrics_fn, device, epoch, writer):
+-    """训练一个epoch，同步计算损失和图像质量指标"""
+-    model.train()
+-    # 初始化累计变量（按样本数加权）
+-    total_loss = 0.0
+-    total_psnr = 0.0
+-    total_ssim = 0.0
+-    total_rmse = 0.0
+-    total_samples = 0
+-
+-    # 进度条显示训练过程
+-    progress_bar = tqdm(train_loader, desc=f"[Train] Epoch {epoch:3d}", unit="batch")
+-    for batch_idx, (ld_img, nd_img) in enumerate(progress_bar):
+-        # 数据移至设备（CPU/GPU）
+-        ld_img = ld_img.to(device, non_blocking=True)  # 低剂量CT（输入）
+-        nd_img = nd_img.to(device, non_blocking=True)  # 正常剂量CT（标签）
+-        batch_size = ld_img.size(0)
+-        total_samples += batch_size
+-
+-        # 1. 清零梯度
+-        optimizer.zero_grad()
+-
+-        # 2. 前向传播
+-        outputs = model(ld_img)
+-
+-        # 3. 计算损失和指标
+-        loss = criterion(outputs, nd_img)
+-        metrics = metrics_fn(outputs, nd_img)  # 一次性获取PSNR/SSIM/RMSE
+-
+-        # 4. 反向传播与参数更新
+-        loss.backward()
+-        optimizer.step()  # 更新权重
+-
+-        # 5. 累计损失和指标
+-        total_loss += loss.item() * batch_size
+-        total_psnr += metrics["psnr"] * batch_size
+-        total_ssim += metrics["ssim"] * batch_size
+-        total_rmse += metrics["rmse"] * batch_size
+-
+-        # 6. 实时更新进度条（显示当前batch的损失和PSNR）
+-        progress_bar.set_postfix({
+-            "batch_loss": f"{loss.item():.6f}",
+-            "batch_psnr": f"{metrics['psnr']:.2f}",
+-            "batch_ssim": f"{metrics['ssim']:.4f}"
+-        })
+-
+-        # 7. 记录batch级日志（每10个batch写一次TensorBoard）
+-        if (batch_idx + 1) % 10 == 0:
+-            global_step = epoch * len(train_loader) + batch_idx
+-            writer.add_scalar("Train/Batch_Loss", loss.item(), global_step)
+-            writer.add_scalar("Train/Batch_PSNR", metrics["psnr"], global_step)
+-            writer.add_scalar("Train/Batch_SSIM", metrics["ssim"], global_step)
+-            writer.add_scalar("Train/Batch_RMSE", metrics["rmse"], global_step)
+-
+-    # 8. 计算epoch级平均指标
+-    avg_loss = total_loss / total_samples
+-    avg_psnr = total_psnr / total_samples
+-    avg_ssim = total_ssim / total_samples
+-    avg_rmse = total_rmse / total_samples
+-
+-    # 9. 记录epoch级日志（写入TensorBoard）
+-    writer.add_scalar("Train/Epoch_Loss", avg_loss, epoch)
+-    writer.add_scalar("Train/Epoch_PSNR", avg_psnr, epoch)
+-    writer.add_scalar("Train/Epoch_SSIM", avg_ssim, epoch)
+-    writer.add_scalar("Train/Epoch_RMSE", avg_rmse, epoch)
+-
+-    return {
+-        "loss": avg_loss,
+-        "psnr": avg_psnr,
+-        "ssim": avg_ssim,
+-        "rmse": avg_rmse
+-    }
+-
+-
+-def validate(model, val_loader, criterion, metrics_fn, device, epoch, writer):
+-    """验证模型，计算损失和指标，同步记录图像对比"""
+-    model.eval()
+-    # 初始化累计变量
+-    total_loss = 0.0
+-    total_psnr = 0.0
+-    total_ssim = 0.0
+-    total_rmse = 0.0
+-    total_samples = 0
+-
+-    # 关闭梯度计算（加速验证，避免内存占用）
+-    with torch.no_grad():
+-        progress_bar = tqdm(val_loader, desc=f"[Val]   Epoch {epoch:3d}", unit="batch")
+-        for batch_idx, (ld_img, nd_img) in enumerate(progress_bar):
+-            ld_img = ld_img.to(device, non_blocking=True)
+-            nd_img = nd_img.to(device, non_blocking=True)
+-            batch_size = ld_img.size(0)
+-            total_samples += batch_size
+-
+-            # 1. 前向传播
+-            outputs = model(ld_img)
+-
+-            # 2. 计算损失和指标
+-            loss = criterion(outputs, nd_img)
+-            metrics = metrics_fn(outputs, nd_img)
+-
+-            # 3. 累计损失和指标
+-            total_loss += loss.item() * batch_size
+-            total_psnr += metrics["psnr"] * batch_size
+-            total_ssim += metrics["ssim"] * batch_size
+-            total_rmse += metrics["rmse"] * batch_size
+-
+-            # 4. 实时更新进度条
+-            progress_bar.set_postfix({
+-                "batch_loss": f"{loss.item():.6f}",
+-                "batch_psnr": f"{metrics['psnr']:.2f}",
+-                "batch_ssim": f"{metrics['ssim']:.4f}"
+-            })
+-
+-            # 5. 记录验证集图像对比（每5个epoch，仅取第一个batch的第一张图）
+-            if epoch % 5 == 0 and batch_idx == 0:
+-                # 图像归一化到[0,1]（TensorBoard显示需要）
+-                def normalize_img(img_tensor):
+-                    img = img_tensor.cpu().numpy()[0, 0]  # (B,1,H,W) → (H,W)
+-                    img_min, img_max = img.min(), img.max()
+-                    return (img - img_min) / (img_max - img_min + 1e-8)  # 避免除零
+-
+-                # 提取并归一化3张图：低剂量输入、正常剂量标签、模型输出
+-                ld_img_norm = normalize_img(ld_img)
+-                nd_img_norm = normalize_img(nd_img)
+-                output_norm = normalize_img(outputs)
+-
+-                # 写入TensorBoard（三张图横向排列，便于对比）
+-                writer.add_image(f"Val/Epoch_{epoch}_LowDose", ld_img_norm, epoch, dataformats="HW")
+-                writer.add_image(f"Val/Epoch_{epoch}_FullDose", nd_img_norm, epoch, dataformats="HW")
+-                writer.add_image(f"Val/Epoch_{epoch}_ModelOutput", output_norm, epoch, dataformats="HW")
+-
+-    # 6. 计算验证集epoch级平均指标
+-    avg_loss = total_loss / total_samples
+-    avg_psnr = total_psnr / total_samples
+-    avg_ssim = total_ssim / total_samples
+-    avg_rmse = total_rmse / total_samples
+-
+-    # 7. 记录验证集epoch级日志
+-    writer.add_scalar("Val/Epoch_Loss", avg_loss, epoch)
+-    writer.add_scalar("Val/Epoch_PSNR", avg_psnr, epoch)
+-    writer.add_scalar("Val/Epoch_SSIM", avg_ssim, epoch)
+-    writer.add_scalar("Val/Epoch_RMSE", avg_rmse, epoch)
+-
+-    return {
+-        "loss": avg_loss,
+-        "psnr": avg_psnr,
+-        "ssim": avg_ssim,
+-        "rmse": avg_rmse
+-    }
+-
+-
+-def main(args):
+-    # 1. 设备配置（优先GPU，无GPU则用CPU）
+-    device = torch.device(
+-        f"cuda:{args.gpu}" if torch.cuda.is_available() and args.gpu >= 0 else "cpu"
+-    )
+-    print(f"=" * 60)
+-    print(f"训练配置：")
+-    print(f"  设备: {device}")
+-    print(f"  数据集根目录: {args.data_dir}")
+-    print(f"  训练轮数: {args.epochs}")
+-    print(f"  批次大小: {args.batch_size}")
+-    print(f"  初始学习率: {args.lr}")
+-    print(f"  日志保存目录: {args.log_dir}")
+-    print(f"  模型保存目录: {args.save_dir}")
+-    print(f"=" * 60)
+-
+-    # 2. 加载数据集（适配256×256图像）
+-    print("\n[1/5] 加载数据集...")
+-    # 生成训练/验证集图像对列表
+-    train_pairs = get_pair_list(args.data_dir, split="train")
+-    val_pairs = get_pair_list(args.data_dir, split="val")
+-    # 初始化数据集（指定目标尺寸256×256）
+-    train_dataset = CTDataset(train_pairs, target_size=256)
+-    val_dataset = CTDataset(val_pairs, target_size=256)
+-    # 构建DataLoader（多线程加载，pin_memory加速GPU传输）
+-    train_loader = DataLoader(
+-        train_dataset,
+-        batch_size=args.batch_size,
+-        shuffle=True,
+-        num_workers=args.num_workers,
+-        pin_memory=True,
+-        drop_last=True  # 丢弃最后一个不完整的batch
+-    )
+-    val_loader = DataLoader(
+-        val_dataset,
+-        batch_size=args.batch_size,
+-        shuffle=False,
+-        num_workers=args.num_workers,
+-        pin_memory=True,
+-        drop_last=False
+-    )
+-    print(f"  训练集：{len(train_dataset)} 样本 | {len(train_loader)} 批次")
+-    print(f"  验证集：{len(val_dataset)} 样本 | {len(val_loader)} 批次")
+-    print(f"  图像尺寸：{train_dataset[0][0].shape}（已Resize到256×256）")
+-
+-    # 3. 初始化模型、损失函数、优化器、指标计算器
+-    print("\n[2/5] 初始化模型与工具...")
+-
+-    ########################################################################################################
+-    # 初始化模型（TransCT模型）
+-    model = LDCTNet256().to(device)
+-
+-    # 初始化LDCTNet_Swin（输入尺寸256×256，与数据集匹配）
+-    # model = LDCTNet_Swin(
+-    #     input_size=(256, 256),
+-    #     base_channels=16,
+-    #     swin_window_size=7,
+-    #     swin_num_heads=8
+-    # ).to(device)
+-    # model = LDCTNet_Swin_improve().to(device)
+-    # 打印模型信息
+-    print(f"模型参数数量: {sum(p.numel() for p in model.parameters())}")
+-    print(f"模型结构:")
+-    print(model)
+-    #############################################################################################################
+-
+-    # 损失函数（MSE适合CT剂量恢复，可后续替换为MSE+SSIM混合损失）
+-    criterion = HybridLoss().to(device)
+-
+-    # 优化器（Adam + 权重衰减防过拟合）
+-    optimizer = optim.Adam(
+-        model.parameters(),
+-        lr=args.lr,
+-        weight_decay=1e-5  # 权重衰减系数，可根据需求调整
+-    )
+-    # 学习率调度器（验证损失不下降时降低学习率）
+-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+-        optimizer,
+-        mode="min",  # 基于"验证损失"最小化调整
+-        factor=0.5,  # 学习率降低为原来的1/2
+-        patience=3,  # 连续3个epoch无改善则调整
+-        min_lr=1e-7  # 学习率下限
+-    )
+-    # 指标计算器（data_range需与预处理后图像范围匹配，这里假设[0,1]）
+-    metrics_fn = ImageMetrics(data_range=1.0).to(device)
+-
+-    # 4. 日志与模型保存配置
+-    print("\n[3/5] 配置日志与模型保存...")
+-    # 创建日志和模型保存目录（不存在则自动创建）
+-    os.makedirs(args.log_dir, exist_ok=True)
+-    os.makedirs(args.save_dir, exist_ok=True)
+-    # 初始化TensorBoard writer
+-    writer = SummaryWriter(log_dir=args.log_dir)
+-
+-    # 新增：初始化训练记录器（保存到log_dir下的metrics.csv）
+-    recorder = TrainingRecorder(
+-        save_path=os.path.join(args.log_dir, "training_metrics.csv"),
+-        args=args  # 传入训练参数，记录到CSV头部
+-    )
+-
+-    # 最佳模型记录（用验证集PSNR作为评判标准，PSNR越高模型越好）
+-    best_val_psnr = 0.0
+-    best_val_epoch = 0
+-
+-    # 5. 加载预训练模型（可选，支持断点续训）
+-    if args.resume != "":
+-        print(f"\n[4/5] 加载预训练模型：{args.resume}")
+-        if os.path.isfile(args.resume):
+-            checkpoint = torch.load(args.resume, map_location=device)
+-            # 加载模型权重和优化器状态
+-            model.load_state_dict(checkpoint["model_state_dict"])
+-            optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+-            # 恢复训练进度和最佳指标
+-            start_epoch = checkpoint["epoch"] + 1
+-            best_val_psnr = checkpoint["best_val_psnr"]
+-            best_val_epoch = checkpoint["best_val_epoch"]
+-            print(f"  恢复训练：从Epoch {start_epoch}开始")
+-            print(f"  历史最佳：Epoch {best_val_epoch} | Val PSNR: {best_val_psnr:.2f}")
+-        else:
+-            print(f"  警告：未找到预训练模型文件，将从头开始训练")
+-            start_epoch = 0
+-    else:
+-        start_epoch = 0
+-
+-    # 6. 训练主循环
+-    print("\n[5/5] 开始训练...")
+-    for epoch in range(start_epoch, args.epochs):
+-        # 训练一个epoch
+-        train_metrics = train_one_epoch(
+-            model, train_loader, criterion, optimizer, metrics_fn, device, epoch, writer
+-        )
+-        # 验证一个epoch
+-        val_metrics = validate(
+-            model, val_loader, criterion, metrics_fn, device, epoch, writer
+-        )
+-        # 调整学习率（基于验证集损失）
+-        scheduler.step(val_metrics["loss"])
+-
+-        # 新增：记录当前epoch的学习率（用于CSV保存）
+-        current_lr = optimizer.param_groups[0]["lr"]
+-        # --------------------------
+-        # 新增：本地保存图像对比网格
+-        # --------------------------
+-        save_freq = 3  # 每5个epoch保存一次（可调整为1、10等）
+-        if epoch % save_freq == 0:
+-            # 获取第一个batch的第一个样本
+-            val_first_batch = next(iter(val_loader))
+-            ld_sample, nd_sample = val_first_batch
+-            ld_sample = ld_sample.to(device, non_blocking=True)
+-            nd_sample = nd_sample.to(device, non_blocking=True)
+-
+-            # 模型推理（仅对第一个样本）
+-            model.eval()
+-            with torch.no_grad():
+-                output_sample = model(ld_sample)
+-
+-            # 调用保存函数（保存路径：log_dir/images）
+-            save_image_grid(
+-                ld_img=ld_sample,
+-                nd_img=nd_sample,
+-                output_img=output_sample,
+-                save_path=os.path.join(args.image_dir, "images"),  # 保存目录
+-                epoch=epoch
+-            )
+-        # --------------------------
+-        # 新增代码结束
+-        # --------------------------
+-
+-        # 7. 控制台打印epoch总结（格式化输出，清晰易读）
+-        print(f"\n" + "=" * 80)
+-        print(f"Epoch {epoch:3d}/{args.epochs - 1:3d} | 训练集指标：")
+-        print(f"  损失：{train_metrics['loss']:.6f} | PSNR：{train_metrics['psnr']:.2f} dB")
+-        print(f"  SSIM：{train_metrics['ssim']:.4f} | RMSE：{train_metrics['rmse']:.6f}")
+-        print(f"Epoch {epoch:3d}/{args.epochs - 1:3d} | 验证集指标：")
+-        print(f"  损失：{val_metrics['loss']:.6f} | PSNR：{val_metrics['psnr']:.2f} dB")
+-        print(f"  SSIM：{val_metrics['ssim']:.4f} | RMSE：{val_metrics['rmse']:.6f}")
+-        print(f"=" * 80)
+-
+-        # 新增：调用recorder记录指标到CSV
+-        recorder.record_epoch(epoch, train_metrics, val_metrics, current_lr)
+-
+-        # 8. 保存最佳模型（验证集PSNR更高则更新）
+-        if val_metrics["psnr"] > best_val_psnr:
+-            best_val_psnr = val_metrics["psnr"]
+-            best_val_epoch = epoch
+-            # 保存模型权重、优化器状态、训练进度
+-            checkpoint = {
+-                "epoch": epoch,
+-                "model_state_dict": model.state_dict(),
+-                "optimizer_state_dict": optimizer.state_dict(),
+-                "best_val_psnr": best_val_psnr,
+-                "best_val_epoch": best_val_epoch,
+-                "val_metrics": val_metrics  # 保存当前验证集指标
+-            }
+-            best_model_path = os.path.join(args.save_dir, "best_model.pth")
+-            torch.save(checkpoint, best_model_path)
+-            print(f"[保存最佳模型] Epoch {epoch} | 验证集PSNR：{best_val_psnr:.2f} dB")
+-
+-        # 9. 保存定期 checkpoint（每10个epoch保存一次，便于回溯）
+-        if (epoch + 1) % 50 == 0:
+-            checkpoint = {
+-                "epoch": epoch,
+-                "model_state_dict": model.state_dict(),
+-                "optimizer_state_dict": optimizer.state_dict(),
+-                "val_metrics": val_metrics
+-            }
+-            checkpoint_path = os.path.join(args.save_dir, f"checkpoint_epoch_{epoch}.pth")
+-            torch.save(checkpoint, checkpoint_path)
+-            print(f"[保存定期 checkpoint] Epoch {epoch} | 路径：{checkpoint_path}")
+-
+-    # 10. 训练结束：打印总结并关闭writer
+-    print("\n" + "=" * 60)
+-    print("训练完成！")
+-    print(f"最佳模型：Epoch {best_val_epoch} | 验证集PSNR：{best_val_psnr:.2f} dB")
+-    print(f"最佳模型路径：{os.path.join(args.save_dir, 'best_model.pth')}")
+-    writer.close()
+-    print("TensorBoard 日志已保存在：{}".format(args.log_dir))
+-
+-
+-if __name__ == "__main__":
+-    parser = argparse.ArgumentParser()
+-    parser.add_argument("--data_dir", type=str, default="./ND_LD_Paired_Data")
+-    parser.add_argument("--epochs", type=int, default=300)
+-    parser.add_argument("--batch_size", type=int, default=8)
+-    parser.add_argument("--lr", type=float, default=1e-4)
+-    parser.add_argument("--log_dir", type=str, default="./logs")
+-    parser.add_argument("--image_dir", type=str, default="./image_loader")
+-    parser.add_argument("--save_dir", type=str, default="./checkpoints")
+-    parser.add_argument("--num_workers", type=int, default=4)
+-    parser.add_argument("--gpu", type=int, default=0)
+-    parser.add_argument("--resume", type=str, default="")
+-    args = parser.parse_args()
+-    main(args)
+Index: SwinTransCT-main/utils.py
+===================================================================
+diff --git a/SwinTransCT-main/utils.py b/SwinTransCT-main/utils.py
+deleted file mode 100644
+--- a/SwinTransCT-main/utils.py	(revision 7a4bc7d60dc78b00aa690a7d9b931c88b34458fb)
++++ /dev/null	(revision 7a4bc7d60dc78b00aa690a7d9b931c88b34458fb)
+@@ -1,175 +0,0 @@
+-import csv
+-import math
+-import os
+-
+-import torch
+-import torch.nn.functional as F
+-from torch import nn
+-
+-
+-def calculate_psnr(img1, img2, data_range=1.0):
+-    """
+-    计算 PSNR（峰值信噪比）
+-    :param img1: 预测图像张量 (B, C, H, W)
+-    :param img2: 真实图像张量 (B, C, H, W)
+-    :param data_range: 图像数据范围（默认1.0，需与预处理后的图像范围匹配）
+-    :return: 批量图像的平均 PSNR
+-    """
+-    # 计算 MSE（均方误差）
+-    mse = F.mse_loss(img1, img2, reduction='mean')
+-    if mse == 0:
+-        return float('inf')  # MSE为0时PSNR无穷大
+-    # PSNR公式：PSNR = 10 * log10((data_range^2) / MSE)
+-    psnr = 10 * torch.log10((data_range ** 2) / mse)
+-    return psnr.item()
+-
+-
+-def calculate_ssim(img1, img2, data_range=1.0, window_size=11, window_sigma=1.5):
+-    """
+-    计算 SSIM（结构相似性指数）
+-    参考 PyTorch 官方实现思路，适配批量图像
+-    :param img1: 预测图像张量 (B, C, H, W)
+-    :param img2: 真实图像张量 (B, C, H, W)
+-    :param data_range: 图像数据范围（默认1.0）
+-    :param window_size: 高斯窗口大小（默认11，需为奇数）
+-    :param window_sigma: 高斯窗口标准差（默认1.5）
+-    :return: 批量图像的平均 SSIM
+-    """
+-    device = img1.device
+-    C1 = (0.01 * data_range) ** 2  # 稳定性常数1
+-    C2 = (0.03 * data_range) ** 2  # 稳定性常数2
+-
+-    # 生成1D高斯窗口
+-    gauss = torch.Tensor([math.exp(-(x - window_size // 2) ** 2 / (2 * window_sigma ** 2))
+-                          for x in range(window_size)]).to(device)
+-    gauss = gauss / gauss.sum()  # 归一化
+-
+-    # 扩展为2D窗口（1, 1, window_size, window_size）
+-    window = gauss.unsqueeze(1) @ gauss.unsqueeze(0)
+-    window = window.unsqueeze(0).unsqueeze(0).expand(img1.shape[1], 1, window_size, window_size)
+-
+-    # 计算图像均值（高斯滤波）
+-    mu1 = F.conv2d(img1, window, padding=window_size // 2, groups=img1.shape[1])
+-    mu2 = F.conv2d(img2, window, padding=window_size // 2, groups=img2.shape[1])
+-
+-    # 计算图像方差和协方差
+-    mu1_sq = mu1 ** 2
+-    mu2_sq = mu2 ** 2
+-    mu1_mu2 = mu1 * mu2
+-
+-    sigma1_sq = F.conv2d(img1 ** 2, window, padding=window_size // 2, groups=img1.shape[1]) - mu1_sq
+-    sigma2_sq = F.conv2d(img2 ** 2, window, padding=window_size // 2, groups=img2.shape[1]) - mu2_sq
+-    sigma12 = F.conv2d(img1 * img2, window, padding=window_size // 2, groups=img1.shape[1]) - mu1_mu2
+-
+-    # SSIM公式
+-    ssim_map = ((2 * mu1_mu2 + C1) * (2 * sigma12 + C2)) / ((mu1_sq + mu2_sq + C1) * (sigma1_sq + sigma2_sq + C2))
+-    return ssim_map.mean().item()  # 批量平均
+-
+-
+-def calculate_rmse(img1, img2):
+-    """
+-    计算 RMSE（均方根误差）
+-    :param img1: 预测图像张量 (B, C, H, W)
+-    :param img2: 真实图像张量 (B, C, H, W)
+-    :return: 批量图像的平均 RMSE
+-    """
+-    # RMSE公式：RMSE = sqrt(MSE)
+-    mse = F.mse_loss(img1, img2, reduction='mean')
+-    rmse = torch.sqrt(mse)
+-    return rmse.item()
+-
+-
+-class TrainingRecorder:
+-    """
+-    训练过程记录器：将每个epoch的训练/验证指标保存到CSV文件
+-    支持断点续训时自动续写，避免数据丢失
+-    """
+-
+-    def __init__(self, save_path, args=None):
+-        """
+-        Args:
+-            save_path: CSV文件保存路径（如"logs/training_metrics.csv"）
+-            args: 训练参数（可选，用于记录训练配置到CSV头部）
+-        """
+-        self.save_path = save_path
+-        self._init_csv(args)
+-
+-    def _init_csv(self, args):
+-        """初始化CSV文件：若不存在则创建并写入表头，若存在则跳过表头"""
+-        # 创建父目录（若不存在）
+-        os.makedirs(os.path.dirname(self.save_path), exist_ok=True)
+-
+-        # 检查文件是否已存在
+-        file_exists = os.path.isfile(self.save_path)
+-
+-        with open(self.save_path, 'a', newline='', encoding='utf-8') as f:
+-            writer = csv.DictWriter(f, fieldnames=[
+-                "epoch", "train_loss", "train_psnr", "train_ssim", "train_rmse",
+-                "val_loss", "val_psnr", "val_ssim", "val_rmse", "lr", "timestamp"
+-            ])
+-
+-            # 若文件新创建，先写入训练配置和表头
+-            if not file_exists:
+-                # 写入训练参数配置（便于后续复现实验）
+-                if args is not None:
+-                    f.write("# 训练配置参数\n")
+-                    for key, value in vars(args).items():
+-                        f.write(f"# {key}: {value}\n")
+-                    f.write("# \n")  # 空行分隔配置和数据
+-
+-                # 写入指标表头
+-                writer.writeheader()
+-
+-    def record_epoch(self, epoch, train_metrics, val_metrics, current_lr):
+-        """
+-        记录单个epoch的指标到CSV文件
+-        Args:
+-            epoch: 当前epoch编号（int）
+-            train_metrics: 训练集指标字典（来自train_one_epoch返回值）
+-            val_metrics: 验证集指标字典（来自validate返回值）
+-            current_lr: 当前学习率（float）
+-        """
+-        # 构建指标字典（与CSV表头对应）
+-        metrics_dict = {
+-            "epoch": epoch,
+-            "train_loss": round(train_metrics["loss"], 6),
+-            "train_psnr": round(train_metrics["psnr"], 4),
+-            "train_ssim": round(train_metrics["ssim"], 6),
+-            "train_rmse": round(train_metrics["rmse"], 6),
+-            "val_loss": round(val_metrics["loss"], 6),
+-            "val_psnr": round(val_metrics["psnr"], 4),
+-            "val_ssim": round(val_metrics["ssim"], 6),
+-            "val_rmse": round(val_metrics["rmse"], 6),
+-            "lr": round(current_lr, 8)
+-        }
+-
+-        # 追加写入CSV
+-        with open(self.save_path, 'a', newline='', encoding='utf-8') as f:
+-            writer = csv.DictWriter(f, fieldnames=metrics_dict.keys())
+-            writer.writerow(metrics_dict)
+-
+-        # 打印记录提示（可选）
+-        print(f"[指标记录] Epoch {epoch} 指标已保存到 {self.save_path}")
+-
+-
+-# 封装指标计算类（方便训练中调用）
+-class ImageMetrics(nn.Module):
+-    def __init__(self, data_range=1.0):
+-        super().__init__()
+-        self.data_range = data_range
+-
+-    def forward(self, pred, target):
+-        """
+-        一次性计算 PSNR、SSIM、RMSE
+-        :param pred: 预测图像 (B, C, H, W)
+-        :param target: 真实图像 (B, C, H, W)
+-        :return: metrics_dict（包含三个指标的数值）
+-        """
+-        psnr = calculate_psnr(pred, target, self.data_range)
+-        ssim = calculate_ssim(pred, target, self.data_range)
+-        rmse = calculate_rmse(pred, target)
+-        return {
+-            'psnr': psnr,
+-            'ssim': ssim,
+-            'rmse': rmse
+-        }
