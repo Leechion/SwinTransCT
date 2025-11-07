@@ -273,7 +273,7 @@ def main(args):
 
     ########################################################################################################
     # 初始化模型（TransCT模型）
-    # model = LDCTNet256().to(device)
+    model = LDCTNet256().to(device)
     
    
     # 初始化LDCTNet_Swin（输入尺寸256×256，与数据集匹配）
@@ -283,7 +283,7 @@ def main(args):
     #     swin_window_size=7,
     #     swin_num_heads=8
     # ).to(device)
-    model = LDCTNet_Swin_improve().to(device)
+    # model = LDCTNet_Swin_improve().to(device)
     # 打印模型信息
     print(f"模型参数数量: {sum(p.numel() for p in model.parameters())}")
     print(f"模型结构:")
@@ -370,6 +370,8 @@ def main(args):
     # 新增：本地保存图像对比网格
     # --------------------------
         save_freq = 5  # 每5个epoch保存一次（可调整为1、10等）
+        # 获取第一个batch（用于保存图像对比网格）
+        val_first_batch = next(iter(val_loader))
         if epoch % save_freq == 0:
         # 获取第一个batch的第一个样本
          ld_sample, nd_sample = val_first_batch
@@ -449,7 +451,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_dir", type=str, default="./ND_LD_Paired_Data")
-    parser.add_argument("--epochs", type=int, default=300)
+    parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--batch_size", type=int, default=8)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--log_dir", type=str, default="./logs")
