@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class HybridLoss(nn.Module):
     """
@@ -9,7 +10,7 @@ class HybridLoss(nn.Module):
     输入输出尺寸: [B, 1, H, W]
     """
     def __init__(self, alpha=0.7, beta=0.2, gamma=0.1,
-                 window_size=11, window_sigma=1.5, device='cpu'):
+                 window_size=11, window_sigma=1.5, device='cuda'):
         super(HybridLoss, self).__init__()
         self.alpha = alpha
         self.beta = beta
@@ -34,15 +35,15 @@ class HybridLoss(nn.Module):
 
     def ssim(self, img1, img2, C1=1e-4, C2=9e-4):
         """计算 SSIM，输入 [B,1,H,W]"""
-        mu1 = F.conv2d(img1, self.gaussian_kernel, padding=self.window_size//2)
-        mu2 = F.conv2d(img2, self.gaussian_kernel, padding=self.window_size//2)
+        mu1 = F.conv2d(img1, self.gaussian_kernel.to(device), padding=self.window_size//2)
+        mu2 = F.conv2d(img2, self.gaussian_kernel.to(device), padding=self.window_size//2)
         mu1_sq = mu1**2
         mu2_sq = mu2**2
         mu1_mu2 = mu1*mu2
 
-        sigma1_sq = F.conv2d(img1*img1, self.gaussian_kernel, padding=self.window_size//2) - mu1_sq
-        sigma2_sq = F.conv2d(img2*img2, self.gaussian_kernel, padding=self.window_size//2) - mu2_sq
-        sigma12 = F.conv2d(img1*img2, self.gaussian_kernel, padding=self.window_size//2) - mu1_mu2
+        sigma1_sq = F.conv2d(img1*img1, self.gaussian_kernel.to(device), padding=self.window_size//2) - mu1_sq
+        sigma2_sq = F.conv2d(img2*img2, self.gaussian_kernel.to(device), padding=self.window_size//2) - mu2_sq
+        sigma12 = F.conv2d(img1*img2, self.gaussian_kernel.to(device), padding=self.window_size//2) - mu1_mu2
 
         ssim_map = ((2*mu1_mu2 + C1)*(2*sigma12 + C2)) / ((mu1_sq+mu2_sq + C1)*(sigma1_sq+sigma2_sq + C2))
         return ssim_map.mean()

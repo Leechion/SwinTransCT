@@ -26,7 +26,6 @@ random.seed(0)
 
 def save_image_grid(ld_img, nd_img, output_img, save_path, epoch):
     """
-    保存一行3列的图像对比图（仅取第一个样本，避免多样本干扰）
     布局：低剂量输入 → 正常剂量标签 → 模型输出
     Args:
         ld_img: 低剂量CT输入 [B,1,H,W]
@@ -187,7 +186,7 @@ def validate(model, val_loader, criterion, metrics_fn, device, epoch, writer):
             })
 
             # 5. 记录验证集图像对比（每5个epoch，仅取第一个batch的第一张图）
-            if epoch % 5 == 0 and batch_idx == 0:
+            if epoch % 10 == 0 and batch_idx == 0:
                 # 图像归一化到[0,1]（TensorBoard显示需要）
                 def normalize_img(img_tensor):
                     img = img_tensor.cpu().numpy()[0, 0]  # (B,1,H,W) → (H,W)
@@ -370,7 +369,8 @@ def main(args):
     # --------------------------
     # 新增：本地保存图像对比网格
     # --------------------------
-        save_freq = 5  # 每5个epoch保存一次（可调整为1、10等）
+        save_freq = 3  # 每5个epoch保存一次（可调整为1、10等）
+        val_first_batch  = next(iter(val_loader))
         if epoch % save_freq == 0:
         # 获取第一个batch的第一个样本
          ld_sample, nd_sample = val_first_batch
@@ -449,7 +449,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", type=str, default="/Users/lxxxx/Desktop/CODE/SwinCT/ND_LD_Paired_Data")
+    parser.add_argument("--data_dir", type=str, default="./ND_LD_Paired_Data")
     parser.add_argument("--epochs", type=int, default=300)
     parser.add_argument("--batch_size", type=int, default=8)
     parser.add_argument("--lr", type=float, default=1e-4)
