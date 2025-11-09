@@ -303,12 +303,11 @@ def main(args):
         weight_decay=1e-5  # 权重衰减系数，可根据需求调整
     )
     # 学习率调度器（验证损失不下降时降低学习率）
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(
         optimizer,
-        mode="min",  # 基于"验证损失"最小化调整
-        factor=0.5,  # 学习率降低为原来的1/2
-        patience=3,  # 连续3个epoch无改善则调整
-        min_lr=1e-7  # 学习率下限
+        T_max=args.epochs,   # 余弦周期长度（一般设为总epoch数）
+        eta_min=1e-6         # 最低学习率，防止完全归零
+
     )
     # 指标计算器（data_range需与预处理后图像范围匹配，这里假设[0,1]）
     metrics_fn = ImageMetrics(data_range=1.0).to(device)
@@ -327,7 +326,8 @@ def main(args):
         args=args  # 传入训练参数，记录到CSV头部
     )
 
-    # 最佳模型记录（用验证集PSNR作为评判标准，PSNR越高模型越好）
+    # 最佳模型记录（用验证集ssim作为评判标准，ssim越高模型越好）
+    best_val_ssim = 0.0   
     best_val_psnr = 0.0
     best_val_epoch = 0
 
@@ -363,7 +363,7 @@ def main(args):
             model, val_loader, criterion, metrics_fn, device, epoch, writer
         )
         # 调整学习率（基于验证集损失）
-        scheduler.step(val_metrics["loss"])
+        scheduler.step()
 
         # 新增：记录当前epoch的学习率（用于CSV保存）
         current_lr = optimizer.param_groups[0]["lr"]
@@ -410,8 +410,8 @@ def main(args):
         recorder.record_epoch(epoch, train_metrics, val_metrics, current_lr)
 
         # 8. 保存最佳模型（验证集PSNR更高则更新）
-        if val_metrics["psnr"] > best_val_psnr:
-            best_val_psnr = val_metrics["psnr"]
+        if val_metrics["ssim"] > best_val_ssim:
+            best_val_ssim = val_metrics["ssim"]
             best_val_epoch = epoch
             # 保存模型权重、优化器状态、训练进度
             checkpoint = {
@@ -424,9 +424,9 @@ def main(args):
             }
             best_model_path = os.path.join(args.save_dir, "best_model.pth")
             torch.save(checkpoint, best_model_path)
-            print(f"[保存最佳模型] Epoch {epoch} | 验证集PSNR：{best_val_psnr:.2f} dB")
+            print(f"[保存最佳模型] Epoch {epoch} | 验证集PSNR：{best_val_psnr:.2f} dB | 验证集SSIM：{best_val_ssim:.4f}")
 
-        # 9. 保存定期 checkpoint（每10个epoch保存一次，便于回溯）
+        # 9. 保存定期 checkpoint（每50个epoch保存一次，便于回溯）
         if (epoch + 1) % 50 == 0:
             checkpoint = {
                 "epoch": epoch,
@@ -441,7 +441,7 @@ def main(args):
     # 10. 训练结束：打印总结并关闭writer
     print("\n" + "=" * 60)
     print("训练完成！")
-    print(f"最佳模型：Epoch {best_val_epoch} | 验证集PSNR：{best_val_psnr:.2f} dB")
+    print(f"最佳模型：Epoch {best_val_epoch} | 验证集PSNR：{best_val_psnr:.2f} dB｜验证集：{best_val_ssim:.4f}")
     print(f"最佳模型路径：{os.path.join(args.save_dir, 'best_model.pth')}")
     writer.close()
     print("TensorBoard 日志已保存在：{}".format(args.log_dir))
@@ -461,3 +461,6 @@ if __name__ == "__main__":
     parser.add_argument("--resume", type=str, default="")
     args = parser.parse_args()
     main(args)
+
+
+    
