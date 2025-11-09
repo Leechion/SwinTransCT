@@ -11,7 +11,7 @@ import numpy as np
 import random
 from torchvision.utils import make_grid
 
-# 导入自定义模块（确保路径正确，若报错需调整导入路径）
+# 导入loss模块（确保路径正确，若报错需调整导入路径）
 from loss import HybridLoss
 from dataset import CTDataset, get_pair_list  # 我的数据集类
 from model_improve import LDCTNet_Swin_improve  # 我的LDCTNet_Swin模型
