@@ -17,6 +17,7 @@ from dataset import CTDataset, get_pair_list  # 我的数据集类
 from model_improve import LDCTNet_Swin_improve  # 我的LDCTNet_Swin模型
 from Trans_model_writer import LDCTNet256  # 你的LDCTNet_Swin模型
 from Red_CNN import RED_CNN  # 加载Red_CNN
+from model import LDCTNet_Swin
 ########################################################################################
 from utils import ImageMetrics  # 指标计算模块（PSNR/SSIM/RMSE）
 from utils import TrainingRecorder  # 指标计算模块（PSNR/SSIM/RMSE）
@@ -277,19 +278,14 @@ def main(args):
 
     ########################################################################################################
     # 初始化模型（TransCT模型）
-    # model = LDCTNet256().to(device)
+    #model = LDCTNet256().to(device)
 
     # 初始化模型（Red_CNN模型）
-    model = RED_CNN().to(device)
+    # model = RED_CNN().to(device)
 
-    # 初始化LDCTNet_Swin（输入尺寸256×256，与数据集匹配）
-    # model = LDCTNet_Swin(
-    #     input_size=(256, 256),
-    #     base_channels=16,
-    #     swin_window_size=7,
-    #     swin_num_heads=8
-    # ).to(device)
-    # model = LDCTNet_Swin_improve().to(device)
+    #初始化LDCTNet_Swin（输入尺寸256×256，与数据集匹配）
+    # model = LDCTNet_Swin(input_size=(256, 256), base_channels=16,swin_window_size=7,swin_num_heads=8 ).to(device)
+    model = LDCTNet_Swin_improve().to(device)
     # 打印模型信息
     print(f"模型参数数量: {sum(p.numel() for p in model.parameters())}")
     print(f"模型结构:")
@@ -297,8 +293,8 @@ def main(args):
     #############################################################################################################
 
     # 损失函数（MSE适合CT剂量恢复，可后续替换为MSE+SSIM混合损失）
-    # criterion = HybridLoss().to(device)  
-    criterion = nn.MSELoss().to(device)
+    criterion = HybridLoss().to(device)  
+    #criterion = nn.MSELoss().to(device)
 
     # 优化器（Adam + 权重衰减防过拟合）
     optimizer = optim.Adam(

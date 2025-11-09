@@ -20,34 +20,68 @@ class FeedForward(nn.Module):
 
 
 class MultiHeadAttention(nn.Module):
-    """标准多头注意力机制"""
-    def __init__(self, dim, num_heads=8):
+    """Robust MHA: supports different token lengths for q and kv (N_q != N_kv)."""
+    def __init__(self, dim, num_heads=8, debug=False):
         super().__init__()
+        assert dim % num_heads == 0, "dim must be divisible by num_heads"
         self.num_heads = num_heads
         self.dim = dim
         self.head_dim = dim // num_heads
-        assert self.head_dim * num_heads == dim, "dim must be divisible by num_heads"
-
-        self.qkv = nn.Linear(dim, dim * 3)
-        self.proj = nn.Linear(dim, dim)
+        # separate projections for clarity
+        self.q_proj = nn.Linear(dim, dim)
+        self.k_proj = nn.Linear(dim, dim)
+        self.v_proj = nn.Linear(dim, dim)
+        self.out_proj = nn.Linear(dim, dim)
+        self.debug = debug
 
     def forward(self, x_q, x_kv=None):
+        """
+        x_q: (B, N_q, C)
+        x_kv: (B, N_kv, C)  (if None, x_kv = x_q)
+        returns: (B, N_q, C)
+        """
         if x_kv is None:
             x_kv = x_q
-        B, N, C = x_q.shape
-        qkv = self.qkv(torch.cat([x_q, x_kv, x_kv], dim=1))  # 拼接后线性映射
-        q, k, v = qkv.chunk(3, dim=-1)
 
-        # reshape for multi-head
-        q = q.view(B, N, self.num_heads, self.head_dim).transpose(1, 2)
-        k = k.view(B, N, self.num_heads, self.head_dim).transpose(1, 2)
-        v = v.view(B, N, self.num_heads, self.head_dim).transpose(1, 2)
+        # basic checks
+        if x_q.dim() != 3 or x_kv.dim() != 3:
+            raise RuntimeError(f"MHA expects 3D inputs (B, N, C). Got {x_q.shape} and {x_kv.shape}")
 
+        B, N_q, Cq = x_q.shape
+        B2, N_kv, Ck = x_kv.shape
+        if B != B2:
+            raise RuntimeError("Batch size mismatch between q and kv")
+        if Cq != self.dim or Ck != self.dim:
+            raise RuntimeError(f"Last dim must equal declared dim={self.dim}. Got Cq={Cq}, Ck={Ck}")
+
+        # projections
+        q = self.q_proj(x_q)        # (B, N_q, dim)
+        k = self.k_proj(x_kv)       # (B, N_kv, dim)
+        v = self.v_proj(x_kv)       # (B, N_kv, dim)
+
+        # reshape into heads
+        # q -> (B, heads, N_q, head_dim)
+        q = q.view(B, N_q, self.num_heads, self.head_dim).transpose(1, 2)
+        # k, v -> (B, heads, N_kv, head_dim)
+        k = k.view(B, N_kv, self.num_heads, self.head_dim).transpose(1, 2)
+        v = v.view(B, N_kv, self.num_heads, self.head_dim).transpose(1, 2)
+
+        if self.debug:
+            print(f"MHA q shape {q.shape}, k shape {k.shape}, v shape {v.shape}")
+
+        # scaled dot-product attention
+        # attn: (B, heads, N_q, N_kv)
         attn = (q @ k.transpose(-2, -1)) / (self.head_dim ** 0.5)
         attn = attn.softmax(dim=-1)
-        out = (attn @ v).transpose(1, 2).reshape(B, N, C)
-        out = self.proj(out)
+
+        # out: (B, heads, N_q, head_dim)
+        out = attn @ v
+
+        # merge heads -> (B, N_q, dim)
+        out = out.transpose(1, 2).reshape(B, N_q, self.dim)
+        out = self.out_proj(out)
         return out
+
 
 
 class EncoderLayer(nn.Module):

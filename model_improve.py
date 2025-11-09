@@ -171,7 +171,7 @@ class LDCTNet_Swin_improve(nn.Module):
         
 
         self.final_conv = nn.Conv2d(4, 1, 3, 1, 1)
-        self.out_act = nn.Sigmoid()
+        self.out_act = nn.ReLU()
 
     def forward(self, x):
         # ------------------- 高低频分离 -------------------
