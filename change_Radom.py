@@ -7,9 +7,9 @@ from tqdm import tqdm  # 进度条显示
 # --------------------------
 # 1. 配置参数（根据需求调整）
 # --------------------------
-HDF5_FOLDER = "./ground_truth_test"  # 替换为你的28个HDF5文件所在文件夹
-OUTPUT_FOLDER = "./ND_LD_Paired_Data"  # 输出配对数据的根文件夹
-OCCLUSION_RATE = 0.5  # 遮挡率（0.5=50%剂量降低，可调整为0.3/0.7等）
+HDF5_FOLDER = "/Users/lxxxx/Desktop/ground_truth_test"  # 替换为你的28个HDF5文件所在文件夹
+OUTPUT_FOLDER = "./ND_LD_Paired_Data_.08"  # 输出配对数据的根文件夹
+OCCLUSION_RATE = 0.8  # 遮挡率（0.5=50%剂量降低，可调整为0.3/0.7等）
 NOISE_STD = 0.03  # 低剂量噪声强度（剂量越低，噪声越大，建议0.02-0.05）
 HOLE_SIZE = (5, 5)  # 挡板孔洞大小（像素），模拟物理挡板尺寸
 CT_WINDOW = (40, 400)  # CT窗宽窗位（软组织窗：中心40，宽度400，可按需调整）
