@@ -14,15 +14,17 @@ from torchvision.utils import make_grid
 # 导入自定义模块（确保路径正确，若报错需调整导入路径）
 from loss import HybridLoss
 from dataset import CTDataset, get_pair_list  # 我的数据集类
-from model_improve import LDCTNet_Swin_improve                # 我的LDCTNet_Swin模型
-from Trans_model_writer import LDCTNet256                # 你的LDCTNet_Swin模型
-from utils import ImageMetrics                # 指标计算模块（PSNR/SSIM/RMSE）
-from utils import TrainingRecorder                # 指标计算模块（PSNR/SSIM/RMSE）
-
+from model_improve import LDCTNet_Swin_improve  # 我的LDCTNet_Swin模型
+from Trans_model_writer import LDCTNet256  # 你的LDCTNet_Swin模型
+from Red_CNN import RED_CNN  # 加载Red_CNN
+########################################################################################
+from utils import ImageMetrics  # 指标计算模块（PSNR/SSIM/RMSE）
+from utils import TrainingRecorder  # 指标计算模块（PSNR/SSIM/RMSE）
 
 torch.manual_seed(0)
 np.random.seed(0)
 random.seed(0)
+
 
 def save_image_grid(ld_img, nd_img, output_img, save_path, epoch):
     """
@@ -36,42 +38,44 @@ def save_image_grid(ld_img, nd_img, output_img, save_path, epoch):
     """
     # 创建保存目录
     os.makedirs(save_path, exist_ok=True)
-    
+
     # 图像归一化到[0,1]（按单个样本归一化，保证亮度均衡）
     def normalize(img):
         img = img.detach().cpu()
         img_min = img.min()
         img_max = img.max()
         return (img - img_min) / (img_max - img_min + 1e-8)  # 避免除零
-    
+
     # 只取第一个样本（[B,1,H,W] → [1,H,W]），避免多样本混乱
     ld_sample = ld_img[0:1]  # 取第一个样本，保持[1,1,H,W]格式
     nd_sample = nd_img[0:1]
     output_sample = output_img[0:1]
-    
+
     # 归一化
     ld_norm = normalize(ld_sample)
     nd_norm = normalize(nd_sample)
     output_norm = normalize(output_sample)
-    
+
     # 拼接为一行3列：低剂量（左）→ 正常剂量（中）→ 模型输出（右）
     # 按水平方向（dim=3）拼接，最终形状：[1,1,H, 3*W]
     comparison_img = torch.cat([ld_norm, nd_norm, output_norm], dim=3)
-    
+
     # 转换为PIL图像（适配保存）
     from PIL import Image
     # 处理维度：[1,1,H,3W] → [H,3W]（去掉批量和通道维度）
     img_np = comparison_img.squeeze(0).squeeze(0).numpy()
     img_np = (img_np * 255).astype(np.uint8)  # [0,1] → [0,255]
-    
+
     # 保存文件（文件名含epoch，便于按顺序查看）
     save_filename = f"epoch_{epoch:03d}_comparison.png"  # 03d补零（如005、010）
     save_filepath = os.path.join(save_path, save_filename)
     Image.fromarray(img_np, mode='L').save(save_filepath)  # mode='L'：灰度图格式
-    
+
     # 打印保存日志
     print(f"[图像保存] 一行三列对比图已保存：{save_filepath}")
     print(f"[图像布局] 左：低剂量输入 | 中：正常剂量标签 | 右：模型输出")
+
+
 def train_one_epoch(model, train_loader, criterion, optimizer, metrics_fn, device, epoch, writer):
     """训练一个epoch，同步计算损失和图像质量指标"""
     model.train()
@@ -273,9 +277,11 @@ def main(args):
 
     ########################################################################################################
     # 初始化模型（TransCT模型）
-    model = LDCTNet256().to(device)
-    
-   
+    # model = LDCTNet256().to(device)
+
+    # 初始化模型（Red_CNN模型）
+    model = RED_CNN().to(device)
+
     # 初始化LDCTNet_Swin（输入尺寸256×256，与数据集匹配）
     # model = LDCTNet_Swin(
     #     input_size=(256, 256),
@@ -290,12 +296,10 @@ def main(args):
     print(model)
     #############################################################################################################
 
-
     # 损失函数（MSE适合CT剂量恢复，可后续替换为MSE+SSIM混合损失）
     # criterion = HybridLoss().to(device)  
     criterion = nn.MSELoss().to(device)
 
-    
     # 优化器（Adam + 权重衰减防过拟合）
     optimizer = optim.Adam(
         model.parameters(),
@@ -305,10 +309,10 @@ def main(args):
     # 学习率调度器（验证损失不下降时降低学习率）
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
-        mode="min",          # 基于"验证损失"最小化调整
-        factor=0.5,          # 学习率降低为原来的1/2
-        patience=3,          # 连续3个epoch无改善则调整
-        min_lr=1e-7          # 学习率下限
+        mode="min",  # 基于"验证损失"最小化调整
+        factor=0.5,  # 学习率降低为原来的1/2
+        patience=3,  # 连续3个epoch无改善则调整
+        min_lr=1e-7  # 学习率下限
     )
     # 指标计算器（data_range需与预处理后图像范围匹配，这里假设[0,1]）
     metrics_fn = ImageMetrics(data_range=1.0).to(device)
@@ -365,45 +369,43 @@ def main(args):
         # 调整学习率（基于验证集损失）
         scheduler.step(val_metrics["loss"])
 
-
         # 新增：记录当前epoch的学习率（用于CSV保存）
         current_lr = optimizer.param_groups[0]["lr"]
-    # --------------------------
-    # 新增：本地保存图像对比网格
-    # --------------------------
+        # --------------------------
+        # 新增：本地保存图像对比网格
+        # --------------------------
         save_freq = 5  # 每5个epoch保存一次（可调整为1、10等）
         # 获取第一个batch（用于保存图像对比网格）
         val_first_batch = next(iter(val_loader))
         if epoch % save_freq == 0:
-        # 获取第一个batch的第一个样本
-         ld_sample, nd_sample = val_first_batch
-         ld_sample = ld_sample.to(device, non_blocking=True)
-         nd_sample = nd_sample.to(device, non_blocking=True)
-        
-        # 模型推理（仅对第一个样本）
-         model.eval()
-         with torch.no_grad():
-            output_sample = model(ld_sample)
-        
-        # 调用保存函数（保存路径：log_dir/images）
-         save_image_grid(
-            ld_img=ld_sample,
-            nd_img=nd_sample,
-            output_img=output_sample,
-            save_path=os.path.join(args.image_dir, "images"),  # 保存目录
-            epoch=epoch
-        )
-    # --------------------------
-    # 新增代码结束
-    # --------------------------
+            # 获取第一个batch的第一个样本
+            ld_sample, nd_sample = val_first_batch
+            ld_sample = ld_sample.to(device, non_blocking=True)
+            nd_sample = nd_sample.to(device, non_blocking=True)
 
+            # 模型推理（仅对第一个样本）
+            model.eval()
+            with torch.no_grad():
+                output_sample = model(ld_sample)
+
+            # 调用保存函数（保存路径：log_dir/images）
+            save_image_grid(
+                ld_img=ld_sample,
+                nd_img=nd_sample,
+                output_img=output_sample,
+                save_path=os.path.join(args.image_dir, "images"),  # 保存目录
+                epoch=epoch
+            )
+        # --------------------------
+        # 新增代码结束
+        # --------------------------
 
         # 7. 控制台打印epoch总结（格式化输出，清晰易读）
         print(f"\n" + "=" * 80)
-        print(f"Epoch {epoch:3d}/{args.epochs-1:3d} | 训练集指标：")
+        print(f"Epoch {epoch:3d}/{args.epochs - 1:3d} | 训练集指标：")
         print(f"  损失：{train_metrics['loss']:.6f} | PSNR：{train_metrics['psnr']:.2f} dB")
         print(f"  SSIM：{train_metrics['ssim']:.4f} | RMSE：{train_metrics['rmse']:.6f}")
-        print(f"Epoch {epoch:3d}/{args.epochs-1:3d} | 验证集指标：")
+        print(f"Epoch {epoch:3d}/{args.epochs - 1:3d} | 验证集指标：")
         print(f"  损失：{val_metrics['loss']:.6f} | PSNR：{val_metrics['psnr']:.2f} dB")
         print(f"  SSIM：{val_metrics['ssim']:.4f} | RMSE：{val_metrics['rmse']:.6f}")
         print(f"=" * 80)
@@ -447,7 +449,6 @@ def main(args):
     print(f"最佳模型路径：{os.path.join(args.save_dir, 'best_model.pth')}")
     writer.close()
     print("TensorBoard 日志已保存在：{}".format(args.log_dir))
-
 
 
 if __name__ == "__main__":
