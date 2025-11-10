@@ -1,10 +1,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import math
 
 # ======================
-# ConvBlock 增加 InstanceNorm2d
+# ConvBlock + InstanceNorm
 # ======================
 class ConvBlock(nn.Module):
     def __init__(self, in_ch, out_ch, pool=False):
@@ -12,7 +11,7 @@ class ConvBlock(nn.Module):
         self.pool = pool
         self.conv = nn.Sequential(
             nn.Conv2d(in_ch, out_ch, kernel_size=3, padding=1),
-            nn.InstanceNorm2d(out_ch),           # ✅ 加入 InstanceNorm
+            nn.InstanceNorm2d(out_ch),
             nn.LeakyReLU(0.2, inplace=True)
         )
         if pool:
@@ -26,16 +25,16 @@ class ConvBlock(nn.Module):
 
 
 # ======================
-# ResidualConvBlock 同样加入 InstanceNorm
+# ResidualConvBlock
 # ======================
 class ResidualConvBlock(nn.Module):
     def __init__(self, channels):
         super().__init__()
         self.block = nn.Sequential(
-            nn.Conv2d(channels, channels, kernel_size=3, padding=1),
+            nn.Conv2d(channels, channels, 3, 1, 1),
             nn.InstanceNorm2d(channels),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv2d(channels, channels, kernel_size=3, padding=1),
+            nn.Conv2d(channels, channels, 3, 1, 1),
             nn.InstanceNorm2d(channels)
         )
 
@@ -44,27 +43,20 @@ class ResidualConvBlock(nn.Module):
 
 
 # ======================
-# 可学习高斯卷积模块 (替代固定高斯核)
+# Learnable Gaussian Blur
 # ======================
 class LearnableGaussianBlur(nn.Module):
-    """可学习的高斯滤波器，用Conv2d实现并初始化为高斯权重"""
     def __init__(self, channels=1, kernel_size=5, sigma=1.5):
         super().__init__()
         self.kernel_size = kernel_size
         self.sigma = sigma
-
         self.conv = nn.Conv2d(
-            in_channels=channels,
-            out_channels=channels,
-            kernel_size=kernel_size,
-            padding=kernel_size // 2,
-            groups=channels,   # depthwise
-            bias=False
+            channels, channels, kernel_size, padding=kernel_size // 2,
+            groups=channels, bias=False
         )
         self._init_gaussian_weights()
 
     def _init_gaussian_weights(self):
-        """初始化为固定高斯核"""
         k = self.kernel_size
         sigma = self.sigma
         coords = torch.arange(k) - k // 2
@@ -80,7 +72,7 @@ class LearnableGaussianBlur(nn.Module):
 
 
 # ======================
-# Swin Attention Block（略，保持原实现）
+# Swin Transformer Block
 # ======================
 class WindowAttention(nn.Module):
     def __init__(self, dim, window_size=4, num_heads=4):
@@ -102,7 +94,6 @@ class WindowAttention(nn.Module):
         return x
 
 
-# SwinBlock 同样保持原有功能
 class SwinBlock(nn.Module):
     def __init__(self, dim, num_heads, window_size=4):
         super().__init__()
@@ -122,37 +113,39 @@ class SwinBlock(nn.Module):
 
 
 # ======================
-# 主网络结构 (LDCTNet_Swin)
+# 主网络结构 (改进版)
 # ======================
 class LDCTNet_Swin_improve(nn.Module):
     def __init__(self):
         super().__init__()
 
-        # --- 可学习高斯核 ---
-        self.gaussian = LearnableGaussianBlur(channels=1, kernel_size=5, sigma=1.5)
+        # --- 可学习高斯核分频 ---
+        self.gaussian = LearnableGaussianBlur(1, 5, 1.5)
 
-        # --- 高频与低频路径 ---
+        # 高频分支
         self.conv_hr1 = ConvBlock(1, 64, pool=True)
         self.conv_hr2 = ConvBlock(64, 128, pool=True)
         self.conv_hr3 = ConvBlock(128, 256, pool=True)
         self.conv_hr4 = ConvBlock(256, 256, pool=True)
 
+        # 低频分支
         self.conv_lr1 = ConvBlock(1, 64, pool=True)
         self.conv_lr2 = ConvBlock(64, 128, pool=True)
         self.conv_lr3 = ConvBlock(128, 256, pool=True)
         self.conv_lr4 = ConvBlock(256, 256, pool=True)
 
-        # --- Swin Transformer 主干 ---
-        self.swin_enc1 = SwinBlock(256, num_heads=4, window_size=4)
-        self.swin_enc2 = SwinBlock(256, num_heads=4, window_size=4)
-        self.swin_enc3 = SwinBlock(256, num_heads=4, window_size=4)
+        # Swin Transformer 主干
+        # 高频路径用3层
+        self.swin_high1 = SwinBlock(256, 4, 4)
+        self.swin_high2 = SwinBlock(256, 4, 4)
+        self.swin_high3 = SwinBlock(256, 4, 4)
+        # 低频路径用1层
+        self.swin_low = SwinBlock(256, 4, 4)
 
-        self.swin_dec1 = SwinBlock(256, num_heads=4, window_size=4)
-        self.swin_dec2 = SwinBlock(256, num_heads=4, window_size=4)
-        self.swin_dec3 = SwinBlock(256, num_heads=4, window_size=4)
-
-        # --- 融合与上采样 ---
+        # 融合模块
         self.res_fuse = ResidualConvBlock(256)
+
+        # 上采样
         self.upsample1 = nn.Sequential(
             nn.PixelShuffle(2),
             nn.Conv2d(64, 64, 3, 1, 1),
@@ -168,40 +161,49 @@ class LDCTNet_Swin_improve(nn.Module):
             nn.Conv2d(4, 4, 3, 1, 1),
             nn.LeakyReLU(inplace=True)
         )
-        
 
         self.final_conv = nn.Conv2d(4, 1, 3, 1, 1)
-        self.out_act = nn.Sigmoid()
+        self.out_act = nn.ReLU()
 
     def forward(self, x):
-        # ------------------- 高低频分离 -------------------
-        x_low = self.gaussian(x)          # 低频
-        x_high = x - x_low                # 高频
+        # ------------- 分频 ----------------
+        x_low = self.gaussian(x)
+        x_high = x - x_low
 
-         # ------------------- HR/LR 特征提取 -------------------
-        x_hr = self.conv_hr4(self.conv_hr3(self.conv_hr2(self.conv_hr1(x_high))))
-        x_lr = self.conv_lr4(self.conv_lr3(self.conv_lr2(self.conv_lr1(x_low))))
+        # ------------- 特征提取 ----------------
+        fea_high = self.conv_hr4(self.conv_hr3(self.conv_hr2(self.conv_hr1(x_high))))
+        fea_low = self.conv_lr4(self.conv_lr3(self.conv_lr2(self.conv_lr1(x_low))))
 
-    # ------------------- Swin Transformer 编码解码 -------------------
-        B, C, H, W = x_lr.shape
-        x_flat = x_lr.flatten(2).transpose(1, 2)   # (B, N, C)
-        x_enc = self.swin_enc3(self.swin_enc2(self.swin_enc1(x_flat)))
-        x_dec = self.swin_dec3(self.swin_dec2(self.swin_dec1(x_enc)))
-        x_dec = x_dec.transpose(1, 2).reshape(B, C, H, W)
+        # ------------- Swin Transformer ----------------
+        B, C, H, W = fea_high.shape
+        # 高频3层 Swin
+        h_flat = fea_high.flatten(2).transpose(1, 2)
+        h_feat = self.swin_high3(self.swin_high2(self.swin_high1(h_flat)))
+        h_feat = h_feat.transpose(1, 2).reshape(B, C, H, W)
 
-    # ------------------- 融合 -------------------
-        fea_fused = self.res_fuse(x_dec + x_hr)
+        # 低频1层 Swin
+        l_flat = fea_low.flatten(2).transpose(1, 2)
+        l_feat = self.swin_low(l_flat)
+        l_feat = l_feat.transpose(1, 2).reshape(B, C, H, W)
 
-    # ------------------- 上采样 PixelShuffle 3 次 -------------------
-    # fea_fused 假设 [B,256,16,16]
-        x = self.upsample1(fea_fused)      # -> [B,64,32,32]
-        x = self.upsample2(x)               # -> [B,16,64,64]
-        x = self.upsample3(x)               # -> [B,4,128,128]
-       
+        # ------------- 高频 + 低频融合（残差式） ----------------
+        fused = self.res_fuse(h_feat + l_feat)
 
-    # ------------------- 最终输出到256x256 -------------------
-        x = F.interpolate(x, size=(256,256), mode='bilinear', align_corners=False)
-        x = self.final_conv(x)              # -> [B,1,256,256]
+        # ------------- 上采样到原分辨率 ----------------
+        x = self.upsample1(fused)
+        x = self.upsample2(x)
+        x = self.upsample3(x)
+        x = F.interpolate(x, size=(256, 256), mode='bilinear', align_corners=False)
+        x = self.final_conv(x)
 
-    # ------------------- 输出激活 -------------------
         return self.out_act(x)
+
+
+# # ----------------- quick smoke test -----------------
+# if __name__ == "__main__":
+#     dummy_input = torch.randn(1, 1, 256, 256)
+#     model = LDCTNet_Swin_improve()
+#     out = model(dummy_input)
+#     print("input:", dummy_input.shape)
+#     print("output:", out.shape)
+

@@ -11,12 +11,13 @@ import numpy as np
 import random
 from torchvision.utils import make_grid
 
-# 导入自定义模块（确保路径正确，若报错需调整导入路径）
+# 导入loss模块（确保路径正确，若报错需调整导入路径）
 from loss import HybridLoss
 from dataset import CTDataset, get_pair_list  # 我的数据集类
 from model_improve import LDCTNet_Swin_improve  # 我的LDCTNet_Swin模型
 from Trans_model_writer import LDCTNet256  # 你的LDCTNet_Swin模型
 from Red_CNN import RED_CNN  # 加载Red_CNN
+from model import LDCTNet_Swin
 ########################################################################################
 from utils import ImageMetrics  # 指标计算模块（PSNR/SSIM/RMSE）
 from utils import TrainingRecorder  # 指标计算模块（PSNR/SSIM/RMSE）
@@ -277,19 +278,14 @@ def main(args):
 
     ########################################################################################################
     # 初始化模型（TransCT模型）
-    # model = LDCTNet256().to(device)
+    #model = LDCTNet256().to(device)
 
     # 初始化模型（Red_CNN模型）
-    model = RED_CNN().to(device)
+    # model = RED_CNN().to(device)
 
-    # 初始化LDCTNet_Swin（输入尺寸256×256，与数据集匹配）
-    # model = LDCTNet_Swin(
-    #     input_size=(256, 256),
-    #     base_channels=16,
-    #     swin_window_size=7,
-    #     swin_num_heads=8
-    # ).to(device)
-    # model = LDCTNet_Swin_improve().to(device)
+    #初始化LDCTNet_Swin（输入尺寸256×256，与数据集匹配）
+    # model = LDCTNet_Swin(input_size=(256, 256), base_channels=16,swin_window_size=7,swin_num_heads=8 ).to(device)
+    model = LDCTNet_Swin_improve().to(device)
     # 打印模型信息
     print(f"模型参数数量: {sum(p.numel() for p in model.parameters())}")
     print(f"模型结构:")
@@ -297,22 +293,22 @@ def main(args):
     #############################################################################################################
 
     # 损失函数（MSE适合CT剂量恢复，可后续替换为MSE+SSIM混合损失）
-    # criterion = HybridLoss().to(device)  
-    criterion = nn.MSELoss().to(device)
+    criterion = HybridLoss().to(device)  
+    #criterion = nn.MSELoss().to(device)
 
     # 优化器（Adam + 权重衰减防过拟合）
-    optimizer = optim.Adam(
+    optimizer = optim.AdamW(
         model.parameters(),
+        betas=(0.9, 0.999),
         lr=args.lr,
         weight_decay=1e-5  # 权重衰减系数，可根据需求调整
     )
     # 学习率调度器（验证损失不下降时降低学习率）
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(
         optimizer,
-        mode="min",  # 基于"验证损失"最小化调整
-        factor=0.5,  # 学习率降低为原来的1/2
-        patience=3,  # 连续3个epoch无改善则调整
-        min_lr=1e-7  # 学习率下限
+        T_max=args.epochs,   # 余弦周期长度（一般设为总epoch数）
+        eta_min=1e-6         # 最低学习率，防止完全归零
+
     )
     # 指标计算器（data_range需与预处理后图像范围匹配，这里假设[0,1]）
     metrics_fn = ImageMetrics(data_range=1.0).to(device)
@@ -331,7 +327,8 @@ def main(args):
         args=args  # 传入训练参数，记录到CSV头部
     )
 
-    # 最佳模型记录（用验证集PSNR作为评判标准，PSNR越高模型越好）
+    # 最佳模型记录（用验证集ssim作为评判标准，ssim越高模型越好）
+    best_val_ssim = 0.0   
     best_val_psnr = 0.0
     best_val_epoch = 0
 
@@ -367,7 +364,7 @@ def main(args):
             model, val_loader, criterion, metrics_fn, device, epoch, writer
         )
         # 调整学习率（基于验证集损失）
-        scheduler.step(val_metrics["loss"])
+        scheduler.step()
 
         # 新增：记录当前epoch的学习率（用于CSV保存）
         current_lr = optimizer.param_groups[0]["lr"]
@@ -414,8 +411,8 @@ def main(args):
         recorder.record_epoch(epoch, train_metrics, val_metrics, current_lr)
 
         # 8. 保存最佳模型（验证集PSNR更高则更新）
-        if val_metrics["psnr"] > best_val_psnr:
-            best_val_psnr = val_metrics["psnr"]
+        if val_metrics["ssim"] > best_val_ssim:
+            best_val_ssim = val_metrics["ssim"]
             best_val_epoch = epoch
             # 保存模型权重、优化器状态、训练进度
             checkpoint = {
@@ -428,9 +425,9 @@ def main(args):
             }
             best_model_path = os.path.join(args.save_dir, "best_model.pth")
             torch.save(checkpoint, best_model_path)
-            print(f"[保存最佳模型] Epoch {epoch} | 验证集PSNR：{best_val_psnr:.2f} dB")
+            print(f"[保存最佳模型] Epoch {epoch} | 验证集PSNR：{best_val_psnr:.2f} dB | 验证集SSIM：{best_val_ssim:.4f}")
 
-        # 9. 保存定期 checkpoint（每10个epoch保存一次，便于回溯）
+        # 9. 保存定期 checkpoint（每50个epoch保存一次，便于回溯）
         if (epoch + 1) % 50 == 0:
             checkpoint = {
                 "epoch": epoch,
@@ -445,7 +442,7 @@ def main(args):
     # 10. 训练结束：打印总结并关闭writer
     print("\n" + "=" * 60)
     print("训练完成！")
-    print(f"最佳模型：Epoch {best_val_epoch} | 验证集PSNR：{best_val_psnr:.2f} dB")
+    print(f"最佳模型：Epoch {best_val_epoch} | 验证集PSNR：{best_val_psnr:.2f} dB｜验证集：{best_val_ssim:.4f}")
     print(f"最佳模型路径：{os.path.join(args.save_dir, 'best_model.pth')}")
     writer.close()
     print("TensorBoard 日志已保存在：{}".format(args.log_dir))
@@ -453,8 +450,8 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", type=str, default="./ND_LD_Paired_Data")
-    parser.add_argument("--epochs", type=int, default=100)
+    parser.add_argument("--data_dir", type=str, default="./ND_LD_Paired_Data_0.7")
+    parser.add_argument("--epochs", type=int, default=150)
     parser.add_argument("--batch_size", type=int, default=8)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--log_dir", type=str, default="./logs")
@@ -465,3 +462,8 @@ if __name__ == "__main__":
     parser.add_argument("--resume", type=str, default="")
     args = parser.parse_args()
     main(args)
+
+
+    
+
+
