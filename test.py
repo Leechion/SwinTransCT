@@ -13,7 +13,7 @@ from matplotlib.gridspec import GridSpec
 # 导入你训练代码中的自定义模块（保持路径一致）
 from dataset import CTDataset, get_pair_list  # 复用数据集类
 from model_improve import LDCTNet_Swin_improve  # 你的模型
-from Trans_model import LDCTNet256  # 你的模型
+from Trans_model_writer import LDCTNet256  # 你的模型
 from utils import ImageMetrics  # 复用指标计算模块
 
 # --------------------------
@@ -138,7 +138,7 @@ def test_model(args):
 
     # 4. 初始化模型与指标计算器
     print("\n[2/5] 初始化模型与工具...")
-    model = LDCTNet256().to(device)
+    model = LDCTNet_Swin_improve().to(device)
     print(f"  模型参数数量: {sum(p.numel() for p in model.parameters()):,}")
 
     # 加载模型权重
@@ -263,7 +263,7 @@ def test_model(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # 路径配置
-    parser.add_argument("--data_dir", type=str, default="./ND_LD_Paired_Data", 
+    parser.add_argument("--data_dir", type=str, default="./ND_LD_Paired_Data_0.7", 
                         help="数据集根目录（含train/val/test子文件夹）")
     parser.add_argument("--model_path", type=str, default="./checkpoints/best_model.pth", 
                         help="训练好的模型路径")

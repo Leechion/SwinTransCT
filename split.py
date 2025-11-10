@@ -11,7 +11,7 @@ ND_RAW_DIR = "./ND_LD_Paired_Data_0.7/ND"
 LD_RAW_DIR = "./ND_LD_Paired_Data_0.7/LD"
 
 # 划分后的数据保存根路径（与原始数据同目录，会自动创建train/val/test）
-OUTPUT_ROOT = "/Users/lxxxx/Desktop/CODE/SwinCT/ND_LD_Paired_Data_0.7"
+OUTPUT_ROOT = "/Users/lxxxx/Desktop/CODE/SwinCT/ND_LD_Paired_Data_0.7_1"
 
 # 划分比例（8:1:1）
 TRAIN_RATIO = 0.8
