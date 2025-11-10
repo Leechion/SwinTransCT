@@ -139,7 +139,7 @@ def test_model(args):
 
     # 4. 初始化模型与指标计算器
     print("\n[2/5] 初始化模型与工具...")
-    model = RED_CNN().to(device)
+    model = LDCTNet_Swin_improve().to(device)
     print(f"  模型参数数量: {sum(p.numel() for p in model.parameters()):,}")
 
     # 加载模型权重
@@ -266,7 +266,7 @@ if __name__ == "__main__":
     # 路径配置
     parser.add_argument("--data_dir", type=str, default="./ND_LD_Paired_Data_0.5", 
                         help="数据集根目录（含train/val/test子文件夹）")
-    parser.add_argument("--model_path", type=str, default="./checkpoints/best_model_Red_Cnn.pth", 
+    parser.add_argument("--model_path", type=str, default="./checkpoints/best_model_swin.pth", 
                         help="训练好的模型路径")
     parser.add_argument("--result_dir", type=str, default="./test_results", 
                         help="测试指标CSV保存目录")
