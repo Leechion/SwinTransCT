@@ -198,3 +198,12 @@ class LDCTNet_Swin_improve(nn.Module):
 
         return self.out_act(x)
 
+
+# # ----------------- quick smoke test -----------------
+# if __name__ == "__main__":
+#     dummy_input = torch.randn(1, 1, 256, 256)
+#     model = LDCTNet_Swin_improve()
+#     out = model(dummy_input)
+#     print("input:", dummy_input.shape)
+#     print("output:", out.shape)
+
