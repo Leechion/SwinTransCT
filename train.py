@@ -297,8 +297,9 @@ def main(args):
     #criterion = nn.MSELoss().to(device)
 
     # 优化器（Adam + 权重衰减防过拟合）
-    optimizer = optim.Adam(
+    optimizer = optim.AdamW(
         model.parameters(),
+        betas=(0.9, 0.999),
         lr=args.lr,
         weight_decay=1e-5  # 权重衰减系数，可根据需求调整
     )
@@ -449,8 +450,8 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", type=str, default="./ND_LD_Paired_Data")
-    parser.add_argument("--epochs", type=int, default=100)
+    parser.add_argument("--data_dir", type=str, default="./ND_LD_Paired_Data_0.7")
+    parser.add_argument("--epochs", type=int, default=150)
     parser.add_argument("--batch_size", type=int, default=8)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--log_dir", type=str, default="./logs")
