@@ -9,9 +9,9 @@ from tqdm import tqdm  # 进度条显示
 # --------------------------
 HDF5_FOLDER = "/Users/lxxxx/Desktop/ground_truth_test"  # 替换为你的HDF5文件所在文件夹
 OUTPUT_FOLDER = "./ND_LD_Paired_Data_0.7"  # 输出配对数据的根文件夹
-OCCLUSION_RATE = 0.2  # 总遮挡率（保持低剂量特性，0.6~0.75为宜）
+OCCLUSION_RATE = 0.4  # 总遮挡率（保持低剂量特性，0.6~0.75为宜）
 NOISE_STD = 0.03  # 低剂量噪声强度（建议0.02~0.05）
-MAX_HOLE_COUNT = 100  # 最大孔洞数量（核心！值越小，黑斑越少越大；8~15可调）
+MAX_HOLE_COUNT = 80  # 最大孔洞数量（核心！值越小，黑斑越少越大；8~15可调）
 CT_WINDOW = (40, 400)  # CT窗宽窗位（软组织窗：中心40，宽度400）
 IMAGE_SIZE = (256, 256)  # 输出图像尺寸（适配神经网络）
 
