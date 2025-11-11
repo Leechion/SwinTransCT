@@ -389,24 +389,24 @@ def test_model(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # 路径配置
-    parser.add_argument("--data_dir", type=str, default="./ND_LD_Paired_Data_0.5", 
+    parser.add_argument("--data_dir", type=str, default="./ND_LD_Paired_Data_0.7", 
                         help="数据集根目录（PNG：含test子文件夹；HDF5：直接指向文件夹）")
-    parser.add_argument("--model_path", type=str, default="./checkpoints/best_model_Red_Cnn.pth", 
+    parser.add_argument("--model_path", type=str, default="./checkpoints/best_model_aind0.7.pth", 
                         help="训练好的模型路径")
     parser.add_argument("--result_dir", type=str, default="./test_results", 
                         help="测试指标CSV保存目录")
     parser.add_argument("--img_save_dir", type=str, default="./test_image_floder", 
                         help="测试组图保存目录")
     # 测试配置
-    parser.add_argument("--batch_size", type=int, default=1, help="测试批量大小")
+    parser.add_argument("--batch_size", type=int, default=4, help="测试批量大小")
     parser.add_argument("--num_workers", type=int, default=4, help="数据加载线程数")
     parser.add_argument("--gpu", type=int, default=0, help="GPU编号（-1表示CPU）")
     parser.add_argument("--dpi", type=int, default=600, help="组图分辨率")
-    parser.add_argument("--model", type=str, default="RED_CNN", choices=["RED_CNN", "AINDNet", "LDCTNet256", "LDCTNet_Swin_improve"],
+    parser.add_argument("--model", type=str, default="AINDNet", choices=["RED_CNN", "AINDNet", "LDCTNet256", "LDCTNet_Swin_improve"],
                         help="指定模型类型（避免自动识别错误）")
     # 新增：指定4张样本的参数（二选一即可，需凑够4张）
-    parser.add_argument("--selected_files", nargs="+", type=str, default=['1601.png', '1886.png', '0814.png', '0959.png'],
-                        help="指定测试的样本文件名（需是test集内的文件名，如['ld_001.png', 'ld_002.png']，最多4个）")
+    parser.add_argument("--selected_files", nargs="+", type=str, default=['1490.png', '1423.png', '1155.png', '1250.png'],
+                        help="['1601.png', '1886.png', '0814.png', '0959.png']")
     parser.add_argument("--selected_indices", nargs="+", type=int, default=None,
                         help="指定测试的样本索引（从0开始，如[0,1,2,3]，最多4个）")
     parser.add_argument("--selected_labels", nargs="+", type=str, default=None,
