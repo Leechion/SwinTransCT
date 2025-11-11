@@ -450,7 +450,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", type=str, default="./ND_LD_Paired_Data_0.5")
+    parser.add_argument("--data_dir", type=str, default="./ND_LD_Paired_Data_0.7")
     parser.add_argument("--epochs", type=int, default=150)
     parser.add_argument("--batch_size", type=int, default=8)
     parser.add_argument("--lr", type=float, default=1e-4)

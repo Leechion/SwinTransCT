@@ -255,16 +255,16 @@ def main(args):
     # 2. 创建DataLoader（批量加载，训练时shuffle=True）
     train_loader = DataLoader(
         train_dataset,
-        batch_size=8,
+        batch_size=args.batch_size,
         shuffle=True,
-        num_workers=4,  # 根据CPU核心数调整
+        num_workers=args.num_workers,  # 根据CPU核心数调整
         pin_memory=True  # 加速GPU训练
     )
     val_loader = DataLoader(
         val_dataset,
-        batch_size=8,
+        batch_size=args.batch_size,
         shuffle=False,
-        num_workers=4,
+        num_workers=args.num_workers,
         pin_memory=True
     )
     print(f"  训练集：{len(train_dataset)} 样本 | {len(train_loader)} 批次")
@@ -448,14 +448,14 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", type=str, default="./ND_LD_Paired_Data_0.5")
-    parser.add_argument("--epochs", type=int, default=150)
+    parser.add_argument("--data_dir", type=str, default="./ND_LD_HDF5_Dataset_0.7")
+    parser.add_argument("--epochs", type=int, default=120)
     parser.add_argument("--batch_size", type=int, default=8)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--log_dir", type=str, default="./logs")
     parser.add_argument("--image_dir", type=str, default="./image_loader")
     parser.add_argument("--save_dir", type=str, default="./checkpoints")
-    parser.add_argument("--num_workers", type=int, default=4)
+    parser.add_argument("--num_workers", type=int, default=8)
     parser.add_argument("--gpu", type=int, default=0)
     parser.add_argument("--resume", type=str, default="")
     args = parser.parse_args()
