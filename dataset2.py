@@ -46,20 +46,20 @@ class CTDataset(Dataset):
         # -------------------------------
         # ✅ 数据增强（仅在训练集启用，与参考代码一致）
         # -------------------------------
-        if self.augment:
-            # 水平翻转
-            if random.random() < 0.5:
-                ld_tensor = torch.flip(ld_tensor, dims=[2])
-                nd_tensor = torch.flip(nd_tensor, dims=[2])
-            # 垂直翻转
-            if random.random() < 0.5:
-                ld_tensor = torch.flip(ld_tensor, dims=[1])
-                nd_tensor = torch.flip(nd_tensor, dims=[1])
-            # 随机小角度旋转
-            if random.random() < 0.3:
-                angle = random.choice([-5, -3, 3, 5])
-                ld_tensor = T.functional.rotate(ld_tensor, angle)
-                nd_tensor = T.functional.rotate(nd_tensor, angle)
+        # if self.augment:
+        #     # 水平翻转
+        #     if random.random() < 0.5:
+        #         ld_tensor = torch.flip(ld_tensor, dims=[2])
+        #         nd_tensor = torch.flip(nd_tensor, dims=[2])
+        #     # 垂直翻转
+        #     if random.random() < 0.5:
+        #         ld_tensor = torch.flip(ld_tensor, dims=[1])
+        #         nd_tensor = torch.flip(nd_tensor, dims=[1])
+        #     # 随机小角度旋转
+        #     if random.random() < 0.3:
+        #         angle = random.choice([-5, -3, 3, 5])
+        #         ld_tensor = T.functional.rotate(ld_tensor, angle)
+        #         nd_tensor = T.functional.rotate(nd_tensor, angle)
 
         # ------------------------------------
         # ✅ 像素标准化（确保0-1范围，HDF5已归一化，此处为双重保险）

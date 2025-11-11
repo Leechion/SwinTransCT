@@ -359,35 +359,20 @@ def test_model(args):
     csv_df.to_csv(csv_save_path, index=False, encoding="utf-8-sig")
     print(f"  完整指标CSV已保存：{csv_save_path}")
 
-    # 7. 筛选样本并生成组图（改为自动选择ND-Output差异最小的4张）
-    print("\n[5/5] 自动筛选ND-Output差异最小的4张样本...")
-
-    # 计算每个样本的平均差异值 (MSE)
-    for r in test_results:
-        nd_img = normalize_img(r["nd_img"])
-        output_img = normalize_img(r["output_img"])
-        diff = (nd_img - output_img) ** 2
-        r["mean_diff"] = np.mean(diff)  # 平均绝对差异值，越小越接近ND
-
-    # 按差异从小到大排序，取前4张
-    selected_samples = sorted(test_results, key=lambda x: x["mean_diff"])[:4]
-
-    # 标记来源
-    for s in selected_samples:
-        s["is_selected"] = True
-        s["label"] = f"Lowest Diff {selected_samples.index(s) + 1}"
-
-    # 生成组图
-    create_selected_group_plot(selected_samples, group_img_save_path, dpi=args.dpi)
-
-    # 打印筛选结果总结
-    print("\n筛选样本总结（ND-Output差异最小的4张）：")
-    print("=" * 60)
-    for i, sample in enumerate(selected_samples, 1):
-        print(f"{i}. {sample['filename']} | mean_diff: {sample['mean_diff']:.6f} | "
-              f"PSNR: {sample['psnr']:.2f} dB | SSIM: {sample['ssim']:.4f}")
-    print("=" * 60)
-
+    # 7. 筛选样本并生成组图（核心修改：支持用户指定）
+    print("\n[5/5] 筛选样本并生成组图...")
+    if args.selected_files or args.selected_indices:
+        # 新增：使用用户指定的4张样本
+        selected_samples = parse_selected_samples(args, test_results, test_pairs, test_dataset_len)
+    else:
+        # 原有逻辑：筛选Top2 SSIM + 2张PSNR最好的样本（去重）
+        top2_ssim = sorted(test_results, key=lambda x: x["ssim"], reverse=True)[:2]
+        remaining_for_psnr = [r for r in test_results if r not in top2_ssim]
+        top2_psnr = sorted(remaining_for_psnr, key=lambda x: x["psnr"], reverse=True)[:2]
+        selected_samples = top2_ssim + top2_psnr
+        # 标记为自动筛选
+        for s in selected_samples:
+            s['is_selected'] = False
 
     # 生成组图
     create_selected_group_plot(selected_samples, group_img_save_path, dpi=args.dpi)
@@ -404,13 +389,13 @@ def test_model(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # 路径配置
-    parser.add_argument("--data_dir", type=str, default="./ND_LD_Paired_Data_0.5", 
+    parser.add_argument("--data_dir", type=str, default="./ND_LD_Paired_Data_0.7", 
                         help="数据集根目录（PNG：含test子文件夹；HDF5：直接指向文件夹）")
-    parser.add_argument("--model_path", type=str, default="./checkpoints/best_model_Red_Cnn.pth", 
+    parser.add_argument("--model_path", type=str, default="./checkpoints/best_model_redcnn0.7.pth", 
                         help="训练好的模型路径")
     parser.add_argument("--result_dir", type=str, default="./test_results", 
                         help="测试指标CSV保存目录")
-    parser.add_argument("--img_save_dir", type=str, default="./test_image_floder", 
+    parser.add_argument("--img_save_dir", type=str, default="./test_image_floder_redcnn0.7", 
                         help="测试组图保存目录")
     # 测试配置
     parser.add_argument("--batch_size", type=int, default=1, help="测试批量大小")
@@ -420,8 +405,8 @@ if __name__ == "__main__":
     parser.add_argument("--model", type=str, default="RED_CNN", choices=["RED_CNN", "AINDNet", "LDCTNet256", "LDCTNet_Swin_improve"],
                         help="指定模型类型（避免自动识别错误）")
     # 新增：指定4张样本的参数（二选一即可，需凑够4张）
-    parser.add_argument("--selected_files", nargs="+", type=str, default=['1601.png', '1886.png', '0814.png', '0959.png'],
-                        help="指定测试的样本文件名（需是test集内的文件名，如['ld_001.png', 'ld_002.png']，最多4个）")
+    parser.add_argument("--selected_files", nargs="+", type=str, default=['1490.png','1423.png','1250.png', '1155.png'],
+                        help="指定测试的样本文件名（需是test集内的文件名，最多4个）")
     parser.add_argument("--selected_indices", nargs="+", type=int, default=None,
                         help="指定测试的样本索引（从0开始，如[0,1,2,3]，最多4个）")
     parser.add_argument("--selected_labels", nargs="+", type=str, default=None,
@@ -431,3 +416,6 @@ if __name__ == "__main__":
 
     # 执行测试
     test_model(args)
+
+    #0.5 ['3266.png','1601.png','0025.png', '1886.png']
+    #0.7 ['1490.png','1423.png','1250.png', '1155.png']
