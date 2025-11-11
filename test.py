@@ -359,20 +359,35 @@ def test_model(args):
     csv_df.to_csv(csv_save_path, index=False, encoding="utf-8-sig")
     print(f"  完整指标CSV已保存：{csv_save_path}")
 
-    # 7. 筛选样本并生成组图（核心修改：支持用户指定）
-    print("\n[5/5] 筛选样本并生成组图...")
-    if args.selected_files or args.selected_indices:
-        # 新增：使用用户指定的4张样本
-        selected_samples = parse_selected_samples(args, test_results, test_pairs, test_dataset_len)
-    else:
-        # 原有逻辑：筛选Top2 SSIM + 2张PSNR最好的样本（去重）
-        top2_ssim = sorted(test_results, key=lambda x: x["ssim"], reverse=True)[:2]
-        remaining_for_psnr = [r for r in test_results if r not in top2_ssim]
-        top2_psnr = sorted(remaining_for_psnr, key=lambda x: x["psnr"], reverse=True)[:2]
-        selected_samples = top2_ssim + top2_psnr
-        # 标记为自动筛选
-        for s in selected_samples:
-            s['is_selected'] = False
+    # 7. 筛选样本并生成组图（改为自动选择ND-Output差异最小的4张）
+    print("\n[5/5] 自动筛选ND-Output差异最小的4张样本...")
+
+    # 计算每个样本的平均差异值 (MSE)
+    for r in test_results:
+        nd_img = normalize_img(r["nd_img"])
+        output_img = normalize_img(r["output_img"])
+        diff = (nd_img - output_img) ** 2
+        r["mean_diff"] = np.mean(diff)  # 平均绝对差异值，越小越接近ND
+
+    # 按差异从小到大排序，取前4张
+    selected_samples = sorted(test_results, key=lambda x: x["mean_diff"])[:4]
+
+    # 标记来源
+    for s in selected_samples:
+        s["is_selected"] = True
+        s["label"] = f"Lowest Diff {selected_samples.index(s) + 1}"
+
+    # 生成组图
+    create_selected_group_plot(selected_samples, group_img_save_path, dpi=args.dpi)
+
+    # 打印筛选结果总结
+    print("\n筛选样本总结（ND-Output差异最小的4张）：")
+    print("=" * 60)
+    for i, sample in enumerate(selected_samples, 1):
+        print(f"{i}. {sample['filename']} | mean_diff: {sample['mean_diff']:.6f} | "
+              f"PSNR: {sample['psnr']:.2f} dB | SSIM: {sample['ssim']:.4f}")
+    print("=" * 60)
+
 
     # 生成组图
     create_selected_group_plot(selected_samples, group_img_save_path, dpi=args.dpi)
