@@ -9,99 +9,147 @@ from torch.utils.data import DataLoader
 from PIL import Image
 import argparse
 from matplotlib.gridspec import GridSpec
+from matplotlib.colors import LinearSegmentedColormap
 
-# 导入你训练代码中的自定义模块（保持路径一致）
-from dataset import CTDataset, get_pair_list  # 复用数据集类
+# -------------------------- 新增：HDF5数据集支持（如果需要用HDF5测试集，取消注释） --------------------------
+# import h5py
+# import torchvision.transforms as T
+# class CTHDF5Dataset(torch.utils.data.Dataset):
+#     def __init__(self, hdf5_path, target_size=256):
+#         self.hdf5_path = hdf5_path
+#         self.target_size = target_size
+#         with h5py.File(hdf5_path, "r") as f:
+#             self.num_samples = f.attrs["num_images"]
+#         self.transform = T.Compose([T.Resize((target_size, target_size), T.InterpolationMode.BILINEAR)])
+#     def __len__(self):
+#         return self.num_samples
+#     def __getitem__(self, idx):
+#         with h5py.File(self.hdf5_path, "r") as f:
+#             ld_img = f["LD"][idx].astype(np.float32)
+#             nd_img = f["ND"][idx].astype(np.float32)
+#         ld_tensor = torch.from_numpy(ld_img).unsqueeze(0).float()
+#         nd_tensor = torch.from_numpy(nd_img).unsqueeze(0).float()
+#         ld_tensor = self.transform(ld_tensor)
+#         nd_tensor = self.transform(nd_tensor)
+#         return ld_tensor, nd_tensor
+
+# -------------------------- 导入你训练代码中的自定义模块 --------------------------
+from dataset import CTDataset, get_pair_list  # 默认为PNG数据集，如需HDF5请替换上面的类
 from model_improve import LDCTNet_Swin_improve  # 你的模型
-from Red_CNN import RED_CNN  # 你的模型
-from Trans_model_writer import LDCTNet256  # 你的模型
+from Red_CNN import RED_CNN
+from Trans_model_writer import LDCTNet256
 from utils import ImageMetrics  # 复用指标计算模块
 
-# --------------------------
-# 工具函数：图像归一化与组图绘制（核心修复）
-# --------------------------
+# -------------------------- 核心工具函数 --------------------------
 def normalize_img(img_tensor):
     """将张量图像归一化到[0,1]（适配可视化）"""
     img = img_tensor.detach().cpu().squeeze(0).squeeze(0).numpy()  # (B,1,H,W) → (H,W)
     img_min, img_max = img.min(), img.max()
     return (img - img_min) / (img_max - img_min + 1e-8)  # 避免除零
 
-def create_best_worst_group_plot(selected_samples, save_path, dpi=600):
+def compute_diff_heatmap(output_img, nd_img):
+    """计算Output与ND的差异热力图（归一化到[0,1]）"""
+    output_norm = normalize_img(output_img)
+    nd_norm = normalize_img(nd_img)
+    diff = np.abs(output_norm - nd_norm)
+    # 归一化差异图（确保热力图颜色分布均匀）
+    diff_norm = (diff - diff.min()) / (diff.max() - diff.min() + 1e-8)
+    return diff_norm
+
+def create_selected_group_plot(selected_samples, save_path, dpi=600):
     """
-    生成高清组图：每行对应一个样本（LD → ND → Output），共9行（3最高PSNR+3最高SSIM+3最低RMSE）
-    修复：直接使用样本的 psnr/ssim/rmse 字段，无需依赖 metrics 字典
+    生成最终组图：2行（SSIM最好2张 + PSNR最好2张）×4列（ND、LD、Output、差异热力图）
     """
-    # SCI风格配置（保持图表专业美观）
+    # SCI风格配置（Times New Roman字体，专业美观）
     plt.rcParams.update({
         'font.family': 'Times New Roman',
-        'font.size': 10,
+        'font.size': 12,
         'axes.unicode_minus': False,
         'axes.linewidth': 0.8,
-        'figure.facecolor': 'white'
+        'figure.facecolor': 'white',
+        'savefig.bbox': 'tight'
     })
 
-    # 创建9行3列的组图（9个样本×3张图）
-    fig = plt.figure(figsize=(15, 30), dpi=dpi)
-    gs = GridSpec(9, 3, figure=fig, hspace=0.3, wspace=0.1)  # 紧凑布局
+    # 定义配色（热力图用viridis，专业且区分度高）
+    cmap_heat = "viridis"
 
-    # 定义子图标题（每个样本的3张图标题）
-    subplot_titles = ['Low-Dose CT (Input)', 'Normal-Dose CT (GT)', 'Model Output']
-    # 定义样本类型标签（区分不同筛选条件）
+    # 创建2行4列的组图（2个类别×2张图 = 4行？不：2个类别，每个类别2张图 → 共4行）
+    # 修正布局：4行（Top1 SSIM + Top2 SSIM + Top1 PSNR + Top2 PSNR）×4列
+    fig = plt.figure(figsize=(20, 20), dpi=dpi)
+    gs = GridSpec(4, 4, figure=fig, hspace=0.3, wspace=0.2)
+
+    # 子图列标题
+    col_titles = ['Normal-Dose CT (ND)', 'Low-Dose CT (LD)', 'Model Output', 'Difference Heatmap (|Output - ND|)']
+    # 样本行标签
     sample_labels = [
-        'Top 1 PSNR', 'Top 2 PSNR', 'Top 3 PSNR',
-        'Top 1 SSIM', 'Top 2 SSIM', 'Top 3 SSIM',
-        'Bottom 1 RMSE', 'Bottom 2 RMSE', 'Bottom 3 RMSE'
+        'Top 1 SSIM', 'Top 2 SSIM',
+        'Top 1 PSNR', 'Top 2 PSNR'
     ]
 
-    # 逐个绘制样本（核心修复：读取 psnr/ssim/rmse 字段）
-    for idx, (sample, label) in enumerate(zip(selected_samples, sample_labels)):
-        ld_img = normalize_img(sample['ld_img'])
+    # 逐个绘制样本（4行×4列）
+    for row_idx, (sample, label) in enumerate(zip(selected_samples, sample_labels)):
+        # 归一化图像（适配可视化）
         nd_img = normalize_img(sample['nd_img'])
+        ld_img = normalize_img(sample['ld_img'])
         output_img = normalize_img(sample['output_img'])
-        # 直接从样本中读取指标（不再依赖 metrics 字典）
+        diff_heatmap = compute_diff_heatmap(sample['output_img'], sample['nd_img'])
+
+        # 获取指标
         psnr_val = sample['psnr']
         ssim_val = sample['ssim']
-        rmse_val = sample['rmse']
         filename = sample['filename']
 
-        # 绘制LD图（第1列）
-        ax1 = fig.add_subplot(gs[idx, 0])
-        ax1.imshow(ld_img, cmap='gray', aspect='equal')
-        ax1.set_title(subplot_titles[0], fontsize=11, fontweight='bold')
-        ax1.axis('off')  # 隐藏坐标轴（组图更简洁）
+        # -------------------------- 第1列：ND（高剂量CT） --------------------------
+        ax1 = fig.add_subplot(gs[row_idx, 0])
+        im1 = ax1.imshow(nd_img, cmap='gray', aspect='equal')
+        if row_idx == 0:  # 第一行添加列标题
+            ax1.set_title(col_titles[0], fontsize=14, fontweight='bold', pad=20)
+        ax1.axis('off')
 
-        # 绘制ND图（第2列）
-        ax2 = fig.add_subplot(gs[idx, 1])
-        ax2.imshow(nd_img, cmap='gray', aspect='equal')
-        ax2.set_title(subplot_titles[1], fontsize=11, fontweight='bold')
+        # -------------------------- 第2列：LD（低剂量CT） --------------------------
+        ax2 = fig.add_subplot(gs[row_idx, 1])
+        im2 = ax2.imshow(ld_img, cmap='gray', aspect='equal')
+        if row_idx == 0:
+            ax2.set_title(col_titles[1], fontsize=14, fontweight='bold', pad=20)
         ax2.axis('off')
 
-        # 绘制Output图（第3列）
-        ax3 = fig.add_subplot(gs[idx, 2])
-        ax3.imshow(output_img, cmap='gray', aspect='equal')
-        ax3.set_title(subplot_titles[2], fontsize=11, fontweight='bold')
+        # -------------------------- 第3列：Model Output（模型输出） --------------------------
+        ax3 = fig.add_subplot(gs[row_idx, 2])
+        im3 = ax3.imshow(output_img, cmap='gray', aspect='equal')
+        if row_idx == 0:
+            ax3.set_title(col_titles[2], fontsize=14, fontweight='bold', pad=20)
         ax3.axis('off')
 
-        # 在每行左侧添加样本信息（文件名+指标）→ 直接使用读取的字段
-        info_text = f"{label}\nFile: {filename}\nPSNR: {psnr_val:.2f} dB\nSSIM: {ssim_val:.4f}\nRMSE: {rmse_val:.6f}"
-        fig.text(0.01, 0.97 - idx/9, info_text, fontsize=9, verticalalignment='top',
-                 bbox=dict(boxstyle='round,pad=0.3', facecolor='lightgray', alpha=0.8))
+        # -------------------------- 第4列：差异热力图 --------------------------
+        ax4 = fig.add_subplot(gs[row_idx, 3])
+        im4 = ax4.imshow(diff_heatmap, cmap=cmap_heat, aspect='equal', vmin=0, vmax=1)
+        if row_idx == 0:
+            ax4.set_title(col_titles[3], fontsize=14, fontweight='bold', pad=20)
+        ax4.axis('off')
+
+        # 为热力图添加颜色条（仅最后一行，避免重复）
+        if row_idx == len(selected_samples) - 1:
+            cbar = plt.colorbar(im4, ax=ax4, shrink=0.8, pad=0.05)
+            cbar.set_label('Normalized Difference (0-1)', fontsize=12)
+            cbar.ax.tick_params(labelsize=10)
+
+        # 每行左侧添加样本信息（文件名+指标）
+        info_text = f"{label}\nFile: {filename}\nPSNR: {psnr_val:.2f} dB\nSSIM: {ssim_val:.4f}"
+        fig.text(0.01, 0.97 - row_idx/4, info_text, fontsize=11, verticalalignment='top',
+                 bbox=dict(boxstyle='round,pad=0.5', facecolor='lightgray', alpha=0.9))
 
     # 总标题
-    fig.suptitle('Selected Test Samples: Best Performance (PSNR/SSIM) & Lowest RMSE',
-                 fontsize=16, fontweight='bold', y=0.995)
+    fig.suptitle('Selected Test Samples: Top 2 SSIM & Top 2 PSNR',
+                 fontsize=18, fontweight='bold', y=0.99)
 
-    # 保存高清组图（支持PNG/EPS）
-    plt.tight_layout(rect=[0.05, 0.01, 1.0, 0.99])  # 预留左侧信息栏空间
+    # 保存高清组图
     fig.savefig(save_path, dpi=dpi, bbox_inches='tight', facecolor='white', edgecolor='none')
     plt.close()
     print(f"  高清组图已保存：{save_path}")
 
-# --------------------------
-# 核心测试函数
-# --------------------------
+# -------------------------- 核心测试函数 --------------------------
 def test_model(args):
-    # 1. 设备配置（与训练一致）
+    # 1. 设备配置
     device = torch.device(
         f"cuda:{args.gpu}" if torch.cuda.is_available() and args.gpu >= 0 else "cpu"
     )
@@ -115,20 +163,26 @@ def test_model(args):
     print(f"  批量大小: {args.batch_size}")
     print(f"=" * 60)
 
-    # 2. 创建保存目录（自动创建不存在的目录）
+    # 2. 创建保存目录
     os.makedirs(args.result_dir, exist_ok=True)
     os.makedirs(args.img_save_dir, exist_ok=True)
-    csv_save_path = os.path.join(args.result_dir, "test_metrics.csv")  # 指标CSV
-    group_img_save_path = os.path.join(args.img_save_dir, "best_worst_samples_group.png")  # 组图
+    csv_save_path = os.path.join(args.result_dir, "test_metrics.csv")
+    group_img_save_path = os.path.join(args.img_save_dir, "top2_ssim_top2_psnr_samples.png")
 
-    # 3. 加载测试集（复用训练时的Dataset，确保预处理一致）
+    # 3. 加载测试集（默认PNG，如需HDF5请注释下面3行，取消HDF5加载代码）
     print("\n[1/5] 加载测试集...")
-    test_pairs = get_pair_list(args.data_dir, split="test")  # 读取测试集配对列表
-    test_dataset = CTDataset(test_pairs, target_size=256)  # 与训练时保持相同target_size
+    test_pairs = get_pair_list(args.data_dir, split="test")
+    test_dataset = CTDataset(test_pairs, target_size=256)
+    
+    # -------------------------- 如需HDF5测试集，替换为以下代码 --------------------------
+    # hdf5_path = os.path.join(args.data_dir, "test_dataset.h5")
+    # test_dataset = CTHDF5Dataset(hdf5_path, target_size=256)
+    # test_pairs = [(f"sample_{i}", f"sample_{i}") for i in range(len(test_dataset))]  # 虚拟配对列表，用于文件名
+    
     test_loader = DataLoader(
         test_dataset,
         batch_size=args.batch_size,
-        shuffle=False,  # 测试集不打乱，便于对应文件名
+        shuffle=False,
         num_workers=args.num_workers,
         pin_memory=True,
         drop_last=False
@@ -156,9 +210,9 @@ def test_model(args):
     metrics_fn = ImageMetrics(data_range=1.0).to(device)
     model.eval()  # 切换为评估模式
 
-    # 5. 批量测试与指标记录（核心：移除 metrics 字段，避免冗余）
+    # 5. 批量测试与指标记录
     print("\n[3/5] 开始批量测试...")
-    test_results = []  # 存储每张图的结果（含指标+图像张量）
+    test_results = []
     progress_bar = tqdm(test_loader, desc="[Test] Batch Processing", unit="batch")
 
     for batch_idx, (ld_imgs, nd_imgs) in enumerate(progress_bar):
@@ -171,112 +225,96 @@ def test_model(args):
 
         # 逐张图像计算指标并保存信息
         for idx in range(batch_size):
-            # 提取单张图像（保留原始张量，用于后续绘图）
-            ld_img = ld_imgs[idx:idx+1].clone()  # 克隆避免张量被覆盖
+            # 提取单张图像
+            ld_img = ld_imgs[idx:idx+1].clone()
             nd_img = nd_imgs[idx:idx+1].clone()
             output_img = outputs[idx:idx+1].clone()
 
-            # 计算指标（已修复：无 .item()）
+            # 计算指标
             metrics = metrics_fn(output_img, nd_img)
-            psnr = metrics["psnr"]  # 原生float
-            ssim = metrics["ssim"]
-            rmse = metrics["rmse"]
+            psnr = round(metrics["psnr"].item() if hasattr(metrics["psnr"], 'item') else metrics["psnr"], 4)
+            ssim = round(metrics["ssim"].item() if hasattr(metrics["ssim"], 'item') else metrics["ssim"], 4)
 
-            # 获取文件名
-            ld_filepath = test_pairs[batch_idx * args.batch_size + idx][0]
-            filename = os.path.basename(ld_filepath)  # 如"0359.png"
+            # 获取文件名（适配PNG和HDF5）
+            sample_idx = batch_idx * args.batch_size + idx
+            if len(test_pairs) > 0 and isinstance(test_pairs[0][0], str):
+                filename = os.path.basename(test_pairs[sample_idx][0])
+            else:
+                filename = f"test_sample_{sample_idx:04d}.png"
 
-            # 保存当前图像的完整结果（移除 metrics 字段，避免KeyError）
+            # 保存结果
             test_results.append({
                 "filename": filename,
-                "psnr": round(psnr, 4),
-                "ssim": round(ssim, 4),
-                "rmse": round(rmse, 6),
+                "psnr": psnr,
+                "ssim": ssim,
                 "ld_img": ld_img,
                 "nd_img": nd_img,
                 "output_img": output_img
             })
 
-        # 进度条更新（显示当前平均指标）
+        # 进度条更新
         current_avg = {
             "psnr": np.mean([r["psnr"] for r in test_results]),
-            "ssim": np.mean([r["ssim"] for r in test_results]),
-            "rmse": np.mean([r["rmse"] for r in test_results])
+            "ssim": np.mean([r["ssim"] for r in test_results])
         }
         progress_bar.set_postfix({
             "avg_psnr": f"{current_avg['psnr']:.2f}",
-            "avg_ssim": f"{current_avg['ssim']:.4f}",
-            "avg_rmse": f"{current_avg['rmse']:.6f}"
+            "avg_ssim": f"{current_avg['ssim']:.4f}"
         })
 
-    # 6. 保存完整指标到CSV（含每张图+平均值）
+    # 6. 保存完整指标到CSV
     print("\n[4/5] 保存测试指标CSV...")
-    # 转换为DataFrame（仅保留数值列，排除张量）
     csv_df = pd.DataFrame([{k: v for k, v in r.items() if k not in ["ld_img", "nd_img", "output_img"]} 
                           for r in test_results])
-    
-    # 计算整体平均值并添加到CSV最后一行
+    # 添加平均值行
     avg_row = {
         "filename": "average",
         "psnr": round(csv_df["psnr"].mean(), 4),
-        "ssim": round(csv_df["ssim"].mean(), 4),
-        "rmse": round(csv_df["rmse"].mean(), 6)
+        "ssim": round(csv_df["ssim"].mean(), 4)
     }
     csv_df = pd.concat([csv_df, pd.DataFrame([avg_row])], ignore_index=True)
-    
-    # 保存CSV（支持中文文件名，utf-8-sig编码）
     csv_df.to_csv(csv_save_path, index=False, encoding="utf-8-sig")
     print(f"  完整指标CSV已保存：{csv_save_path}")
-    print(f"  CSV包含 {len(csv_df)-1} 张测试图的指标 + 1行平均值")
 
-    # 7. 筛选最优/最差样本并生成组图（无变化）
-    print("\n[5/5] 筛选样本并生成高清组图...")
-    # 筛选规则：去重（避免同一指标筛选到同一样本），取Top3/Bottom3
-    # 1) 最高3个PSNR（降序排列）
-    top3_psnr = sorted(test_results, key=lambda x: x["psnr"], reverse=True)[:3]
-    # 2) 最高3个SSIM（排除已选的PSNR样本）
-    remaining_for_ssim = [r for r in test_results if r not in top3_psnr]
-    top3_ssim = sorted(remaining_for_ssim, key=lambda x: x["ssim"], reverse=True)[:3]
-    # 3) 最低3个RMSE（排除已选的PSNR/SSIM样本）
-    remaining_for_rmse = [r for r in test_results if r not in top3_psnr + top3_ssim]
-    bottom3_rmse = sorted(remaining_for_rmse, key=lambda x: x["rmse"])[:3]
+    # 7. 筛选2张SSIM最好 + 2张PSNR最好的样本（去重）
+    print("\n[5/5] 筛选样本并生成组图...")
+    # 筛选Top2 SSIM
+    top2_ssim = sorted(test_results, key=lambda x: x["ssim"], reverse=True)[:2]
+    # 筛选Top2 PSNR（排除已选的SSIM样本）
+    remaining_for_psnr = [r for r in test_results if r not in top2_ssim]
+    top2_psnr = sorted(remaining_for_psnr, key=lambda x: x["psnr"], reverse=True)[:2]
+    # 组合最终样本（共4张）
+    selected_samples = top2_ssim + top2_psnr
 
-    # 组合所有选中的样本（共9个）
-    selected_samples = top3_psnr + top3_ssim + bottom3_rmse
-
-    # 生成并保存高清组图
-    create_best_worst_group_plot(selected_samples, group_img_save_path, dpi=args.dpi)
+    # 生成组图
+    create_selected_group_plot(selected_samples, group_img_save_path, dpi=args.dpi)
 
     # 打印筛选结果总结
     print("\n筛选样本总结：")
     print("=" * 60)
-    for i, sample in enumerate(top3_psnr, 1):
-        print(f"Top {i} PSNR: {sample['filename']} | PSNR: {sample['psnr']:.2f} dB")
-    for i, sample in enumerate(top3_ssim, 1):
-        print(f"Top {i} SSIM: {sample['filename']} | SSIM: {sample['ssim']:.4f}")
-    for i, sample in enumerate(bottom3_rmse, 1):
-        print(f"Bottom {i} RMSE: {sample['filename']} | RMSE: {sample['rmse']:.6f}")
+    for i, sample in enumerate(top2_ssim, 1):
+        print(f"Top {i} SSIM: {sample['filename']} | SSIM: {sample['ssim']:.4f} | PSNR: {sample['psnr']:.2f} dB")
+    for i, sample in enumerate(top2_psnr, 1):
+        print(f"Top {i} PSNR: {sample['filename']} | PSNR: {sample['psnr']:.2f} dB | SSIM: {sample['ssim']:.4f}")
     print("=" * 60)
 
-# --------------------------
-# 命令行参数配置
-# --------------------------
+# -------------------------- 命令行参数配置 --------------------------
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # 路径配置
     parser.add_argument("--data_dir", type=str, default="./ND_LD_Paired_Data_0.5", 
-                        help="数据集根目录（含train/val/test子文件夹）")
+                        help="数据集根目录（PNG：含test子文件夹；HDF5：直接指向文件夹）")
     parser.add_argument("--model_path", type=str, default="./checkpoints/best_model_swin.pth", 
                         help="训练好的模型路径")
     parser.add_argument("--result_dir", type=str, default="./test_results", 
                         help="测试指标CSV保存目录")
     parser.add_argument("--img_save_dir", type=str, default="./test_image_floder", 
-                        help="测试组图保存目录（自动创建）")
+                        help="测试组图保存目录")
     # 测试配置
     parser.add_argument("--batch_size", type=int, default=1, help="测试批量大小")
     parser.add_argument("--num_workers", type=int, default=4, help="数据加载线程数")
     parser.add_argument("--gpu", type=int, default=0, help="GPU编号（-1表示CPU）")
-    parser.add_argument("--dpi", type=int, default=600, help="组图分辨率（默认600，越高越清晰）")
+    parser.add_argument("--dpi", type=int, default=600, help="组图分辨率")
     args = parser.parse_args()
 
     # 执行测试
