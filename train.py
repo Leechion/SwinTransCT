@@ -278,14 +278,14 @@ def main(args):
 
     ########################################################################################################
     # 初始化模型（TransCT模型）
-    model = LDCTNet256().to(device)
+    # model = LDCTNet256().to(device)
 
     # 初始化模型（Red_CNN模型）
     # model = RED_CNN().to(device)
 
     #初始化LDCTNet_Swin（输入尺寸256×256，与数据集匹配）
     # model = LDCTNet_Swin(input_size=(256, 256), base_channels=16,swin_window_size=7,swin_num_heads=8 ).to(device)
-    # model = LDCTNet_Swin_improve().to(device)
+    model = LDCTNet_Swin_improve().to(device)
     # 打印模型信息
     print(f"模型参数数量: {sum(p.numel() for p in model.parameters())}")
     print(f"模型结构:")
@@ -423,7 +423,7 @@ def main(args):
                 "best_val_epoch": best_val_epoch,
                 "val_metrics": val_metrics  # 保存当前验证集指标
             }
-            best_model_path = os.path.join(args.save_dir, "best_model_trans0.5.pth")
+            best_model_path = os.path.join(args.save_dir, "best_model.pth")
             torch.save(checkpoint, best_model_path)
             print(f"[保存最佳模型] Epoch {epoch} | 验证集PSNR：{best_val_psnr:.2f} dB | 验证集SSIM：{best_val_ssim:.4f}")
 

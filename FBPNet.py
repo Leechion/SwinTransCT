@@ -162,19 +162,19 @@ class FBPNet(nn.Module):
 
 
 # ------------------ quick test ------------------
-if __name__ == '__main__':
-    # auto device
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = FBPNet(img_size=256, num_angles=180, det_count=256).to(device)
-
-    # image input test
-    img = (torch.rand(2, 1, 256, 256, device=device) * 2.0 - 1.0).to(dtype=torch.float32)
-    with torch.no_grad():
-        out = model(img, input_is_sinogram=False)
-    print('image input ->', out.shape, out.dtype, out.device)
-
-    # sinogram input test
-    sino = torch.randn(2, 180, 256, device=device, dtype=torch.float32)
-    with torch.no_grad():
-        out2 = model(sino, input_is_sinogram=True)
-    print('sinogram input ->', out2.shape, out2.dtype, out2.device)
+# if __name__ == '__main__':
+#     # auto device
+#     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+#     model = FBPNet(img_size=256, num_angles=180, det_count=256).to(device)
+#
+#     # image input test
+#     img = (torch.rand(2, 1, 256, 256, device=device) * 2.0 - 1.0).to(dtype=torch.float32)
+#     with torch.no_grad():
+#         out = model(img, input_is_sinogram=False)
+#     print('image input ->', out.shape, out.dtype, out.device)
+#
+#     # sinogram input test
+#     sino = torch.randn(2, 180, 256, device=device, dtype=torch.float32)
+#     with torch.no_grad():
+#         out2 = model(sino, input_is_sinogram=True)
+#     print('sinogram input ->', out2.shape, out2.dtype, out2.device)
