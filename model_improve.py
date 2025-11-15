@@ -123,16 +123,16 @@ class LDCTNet_Swin_improve(nn.Module):
         self.gaussian = LearnableGaussianBlur(1, 5, 1.5)
 
         # 高频分支
-        self.conv_hr1 = ConvBlock(1, 64, pool=True)
-        self.conv_hr2 = ConvBlock(64, 128, pool=True)
-        self.conv_hr3 = ConvBlock(128, 256, pool=True)
-        self.conv_hr4 = ConvBlock(256, 256, pool=True)
+        self.conv_hr1 = ConvBlock(1, 32, pool=True)
+        self.conv_hr2 = ConvBlock(32, 64, pool=True)
+        self.conv_hr3 = ConvBlock(64, 128, pool=True)
+        self.conv_hr4 = ConvBlock(128, 256, pool=True)
 
         # 低频分支
-        self.conv_lr1 = ConvBlock(1, 64, pool=True)
-        self.conv_lr2 = ConvBlock(64, 128, pool=True)
-        self.conv_lr3 = ConvBlock(128, 256, pool=True)
-        self.conv_lr4 = ConvBlock(256, 256, pool=True)
+        self.conv_lr1 = ConvBlock(1, 32, pool=True)
+        self.conv_lr2 = ConvBlock(32, 64, pool=True)
+        self.conv_lr3 = ConvBlock(64, 128, pool=True)
+        self.conv_lr4 = ConvBlock(128, 256, pool=True)
 
         # Swin Transformer 主干
         # 高频路径用3层

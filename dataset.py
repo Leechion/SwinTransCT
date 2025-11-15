@@ -39,17 +39,17 @@ class CTDataset(Dataset):
         # -------------------------------
         # ✅ 数据增强（仅在训练集启用）
         # -------------------------------
-        if self.augment:
-            if random.random() < 0.5:
-                ld_tensor = torch.flip(ld_tensor, dims=[2])  # 水平翻转
-                nd_tensor = torch.flip(nd_tensor, dims=[2])
-            if random.random() < 0.5:
-                ld_tensor = torch.flip(ld_tensor, dims=[1])  # 垂直翻转
-                nd_tensor = torch.flip(nd_tensor, dims=[1])
-            if random.random() < 0.3:
-                angle = random.choice([-5, -3, 3, 5])
-                ld_tensor = T.functional.rotate(ld_tensor, angle)
-                nd_tensor = T.functional.rotate(nd_tensor, angle)
+        # if self.augment:
+        #     if random.random() < 0.5:
+        #         ld_tensor = torch.flip(ld_tensor, dims=[2])  # 水平翻转
+        #         nd_tensor = torch.flip(nd_tensor, dims=[2])
+        #     if random.random() < 0.5:
+        #         ld_tensor = torch.flip(ld_tensor, dims=[1])  # 垂直翻转
+        #         nd_tensor = torch.flip(nd_tensor, dims=[1])
+        #     if random.random() < 0.3:
+        #         angle = random.choice([-5, -3, 3, 5])
+        #         ld_tensor = T.functional.rotate(ld_tensor, angle)
+        #         nd_tensor = T.functional.rotate(nd_tensor, angle)
 
         # ------------------------------------
         # ✅ 像素标准化（将像素归一化到 [0,1]）
