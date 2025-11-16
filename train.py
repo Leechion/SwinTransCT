@@ -18,6 +18,8 @@ from model_improve import LDCTNet_Swin_improve  # 我的LDCTNet_Swin模型
 from Trans_model_writer import LDCTNet256  # 你的LDCTNet_Swin模型
 from Red_CNN import RED_CNN  # 加载Red_CNN
 from model import LDCTNet_Swin
+from C_model import LDCTNet_NoResidualFusion
+
 ########################################################################################
 from utils import ImageMetrics  # 指标计算模块（PSNR/SSIM/RMSE）
 from utils import TrainingRecorder  # 指标计算模块（PSNR/SSIM/RMSE）
@@ -278,7 +280,7 @@ def main(args):
 
     ########################################################################################################
     # 初始化模型（TransCT模型）
-    model = LDCTNet256().to(device)
+    model = LDCTNet_NoResidualFusion().to(device)
 
     # 初始化模型（Red_CNN模型）
     # model = RED_CNN().to(device)
@@ -293,8 +295,8 @@ def main(args):
     #############################################################################################################
 
     # 损失函数（MSE适合CT剂量恢复，可后续替换为MSE+SSIM混合损失）
-    #criterion = HybridLoss().to(device)  
-    criterion = nn.MSELoss().to(device)
+    criterion = HybridLoss().to(device)  
+    #criterion = nn.MSELoss().to(device)
 
     # 优化器（Adam + 权重衰减防过拟合）
     optimizer = optim.AdamW(
@@ -423,7 +425,7 @@ def main(args):
                 "best_val_epoch": best_val_epoch,
                 "val_metrics": val_metrics  # 保存当前验证集指标
             }
-            best_model_path = os.path.join(args.save_dir, "best_model_trans0.5.pth")
+            best_model_path = os.path.join(args.save_dir, "best_model_C.pth")
             torch.save(checkpoint, best_model_path)
             print(f"[保存最佳模型] Epoch {epoch} | 验证集PSNR：{best_val_psnr:.2f} dB | 验证集SSIM：{best_val_ssim:.4f}")
 
