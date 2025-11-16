@@ -81,7 +81,7 @@ def show_and_save_results(original, low_freq, high_freq, save_path=None):
 
 if __name__ == "__main__":
     # 配置参数
-    IMAGE_PATH = "E:/图片1.png"  # 输入图片路径（请替换为你的图片路径）
+    IMAGE_PATH = "E:\\image.png"  # 输入图片路径（请替换为你的图片路径）
     KSIZE = 15  # 高斯核大小（奇数，建议5-31之间调整）
     SIGMA = 3.0  # 高斯标准差（建议0.5-5.0之间调整）
     SAVE_PATH = "high_low_split_result.jpg"  # 结果保存路径（None则不保存）
