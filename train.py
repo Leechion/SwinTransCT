@@ -19,7 +19,9 @@ from Trans_model_writer import LDCTNet256  # 你的LDCTNet_Swin模型
 from Red_CNN import RED_CNN  # 加载Red_CNN
 from model import LDCTNet_Swin
 from C_model import LDCTNet_NoResidualFusion
-from models.ASCON import ASCONModel
+from WGAN_VGG import WGAN_VGG
+
+
 
 ########################################################################################
 from utils import ImageMetrics  # 指标计算模块（PSNR/SSIM/RMSE）
@@ -103,7 +105,7 @@ def train_one_epoch(model, train_loader, criterion, optimizer, metrics_fn, devic
         optimizer.zero_grad()
 
         # 2. 前向传播
-        outputs = model(ld_img)
+        outputs = model.generator(ld_img)
 
         # 3. 计算损失和指标
         loss = criterion(outputs, nd_img)
@@ -174,7 +176,7 @@ def validate(model, val_loader, criterion, metrics_fn, device, epoch, writer):
             total_samples += batch_size
 
             # 1. 前向传播
-            outputs = model(ld_img)
+            outputs = model.generator(ld_img)
 
             # 2. 计算损失和指标
             loss = criterion(outputs, nd_img)
@@ -280,8 +282,8 @@ def main(args):
     print("\n[2/5] 初始化模型与工具...")
 
     ########################################################################################################
-    # 初始化模型（TransCT模型）
-    model = ASCONModel().to(device)
+    # 初始化模型（WGAN_VGG模型）
+    model = model = WGAN_VGG().to(device)
 
     # 初始化模型（Red_CNN模型）
     # model = RED_CNN().to(device)
@@ -296,8 +298,8 @@ def main(args):
     #############################################################################################################
 
     # 损失函数（MSE适合CT剂量恢复，可后续替换为MSE+SSIM混合损失）
-    criterion = HybridLoss().to(device)
-    # criterion = nn.MSELoss().to(device)
+    #criterion = HybridLoss().to(device)
+    criterion = nn.MSELoss().to(device)
 
     # 优化器（Adam + 权重衰减防过拟合）
     optimizer = optim.AdamW(
@@ -386,7 +388,7 @@ def main(args):
             # 模型推理（仅对第一个样本）
             model.eval()
             with torch.no_grad():
-                output_sample = model(ld_sample)
+                output_sample = model.generator(ld_sample)
 
             # 调用保存函数（保存路径：log_dir/images）
             save_image_grid(
@@ -426,7 +428,7 @@ def main(args):
                 "best_val_epoch": best_val_epoch,
                 "val_metrics": val_metrics  # 保存当前验证集指标
             }
-            best_model_path = os.path.join(args.save_dir, "best_model_C.pth")
+            best_model_path = os.path.join(args.save_dir, "best_model_wgan_0.5.pth")
             torch.save(checkpoint, best_model_path)
             print(f"[保存最佳模型] Epoch {epoch} | 验证集PSNR：{best_val_psnr:.2f} dB | 验证集SSIM：{best_val_ssim:.4f}")
 
