@@ -19,6 +19,7 @@ from Trans_model_writer import LDCTNet256  # 你的LDCTNet_Swin模型
 from Red_CNN import RED_CNN  # 加载Red_CNN
 from model import LDCTNet_Swin
 from C_model import LDCTNet_NoResidualFusion
+from models.ASCON import ASCONModel
 
 ########################################################################################
 from utils import ImageMetrics  # 指标计算模块（PSNR/SSIM/RMSE）
@@ -280,12 +281,12 @@ def main(args):
 
     ########################################################################################################
     # 初始化模型（TransCT模型）
-    model = LDCTNet_NoResidualFusion().to(device)
+    model = ASCONModel().to(device)
 
     # 初始化模型（Red_CNN模型）
     # model = RED_CNN().to(device)
 
-    #初始化LDCTNet_Swin（输入尺寸256×256，与数据集匹配）
+    # 初始化LDCTNet_Swin（输入尺寸256×256，与数据集匹配）
     # model = LDCTNet_Swin(input_size=(256, 256), base_channels=16,swin_window_size=7,swin_num_heads=8 ).to(device)
     # model = LDCTNet_Swin_improve().to(device)
     # 打印模型信息
@@ -295,8 +296,8 @@ def main(args):
     #############################################################################################################
 
     # 损失函数（MSE适合CT剂量恢复，可后续替换为MSE+SSIM混合损失）
-    criterion = HybridLoss().to(device)  
-    #criterion = nn.MSELoss().to(device)
+    criterion = HybridLoss().to(device)
+    # criterion = nn.MSELoss().to(device)
 
     # 优化器（Adam + 权重衰减防过拟合）
     optimizer = optim.AdamW(
@@ -308,8 +309,8 @@ def main(args):
     # 学习率调度器（验证损失不下降时降低学习率）
     scheduler = optim.lr_scheduler.CosineAnnealingLR(
         optimizer,
-        T_max=args.epochs,   # 余弦周期长度（一般设为总epoch数）
-        eta_min=1e-6         # 最低学习率，防止完全归零
+        T_max=args.epochs,  # 余弦周期长度（一般设为总epoch数）
+        eta_min=1e-6  # 最低学习率，防止完全归零
 
     )
     # 指标计算器（data_range需与预处理后图像范围匹配，这里假设[0,1]）
@@ -330,7 +331,7 @@ def main(args):
     )
 
     # 最佳模型记录（用验证集ssim作为评判标准，ssim越高模型越好）
-    best_val_ssim = 0.0   
+    best_val_ssim = 0.0
     best_val_psnr = 0.0
     best_val_epoch = 0
 
@@ -464,8 +465,3 @@ if __name__ == "__main__":
     parser.add_argument("--resume", type=str, default="")
     args = parser.parse_args()
     main(args)
-
-
-    
-
-

@@ -39,7 +39,10 @@ from model_improve import LDCTNet_Swin_improve  # 你的模型
 from Red_CNN import RED_CNN
 from Trans_model_writer import LDCTNet256
 from AINDNet import AINDNet  # 新增：导入AINDNet（如果需要测试该模型）
+from A_model import LDCTNet_NoFreq  # 新增：导入AINDNet（如果需要测试该模型）
+from C_model import LDCTNet_NoResidualFusion  # 新增：导入AINDNet（如果需要测试该模型）
 from utils import ImageMetrics  # 复用指标计算模块
+
 
 # -------------------------- 核心工具函数 --------------------------
 def normalize_img(img_tensor):
@@ -47,6 +50,7 @@ def normalize_img(img_tensor):
     img = img_tensor.detach().cpu().squeeze(0).squeeze(0).numpy()  # (B,1,H,W) → (H,W)
     img_min, img_max = img.min(), img.max()
     return (img - img_min) / (img_max - img_min + 1e-8)  # 避免除零
+
 
 def compute_diff_heatmap(output_img, nd_img):
     """计算Output与ND的差异热力图（归一化到[0,1]）"""
@@ -56,6 +60,7 @@ def compute_diff_heatmap(output_img, nd_img):
     # 归一化差异图（确保热力图颜色分布均匀）
     diff_norm = (diff - diff.min()) / (diff.max() - diff.min() + 1e-8)
     return diff_norm
+
 
 def create_selected_group_plot(selected_samples, save_path, dpi=600):
     """
@@ -82,7 +87,7 @@ def create_selected_group_plot(selected_samples, save_path, dpi=600):
     # 子图列标题
     col_titles = ['Normal-Dose CT (ND)', 'Low-Dose CT (LD)', 'Model Output', 'Difference Heatmap (|Output - ND|)']
     # 样本行标签（默认用"Selected Sample X"，用户可通过参数自定义）
-    sample_labels = [s.get('label', f'Selected Sample {i+1}') for i, s in enumerate(selected_samples)]
+    sample_labels = [s.get('label', f'Selected Sample {i + 1}') for i, s in enumerate(selected_samples)]
 
     # 逐个绘制样本（4行×4列）
     for row_idx, (sample, label) in enumerate(zip(selected_samples, sample_labels)):
@@ -133,7 +138,7 @@ def create_selected_group_plot(selected_samples, save_path, dpi=600):
 
         # 每行左侧添加样本信息（文件名+指标）
         info_text = f"{label}\nFile: {filename}\nPSNR: {psnr_val:.2f} dB\nSSIM: {ssim_val:.4f}"
-        fig.text(0.01, 0.97 - row_idx/4, info_text, fontsize=11, verticalalignment='top',
+        fig.text(0.01, 0.97 - row_idx / 4, info_text, fontsize=11, verticalalignment='top',
                  bbox=dict(boxstyle='round,pad=0.5', facecolor='lightgray', alpha=0.9))
 
     # 总标题（区分"用户指定"和"自动筛选"）
@@ -148,6 +153,7 @@ def create_selected_group_plot(selected_samples, save_path, dpi=600):
     fig.savefig(save_path, dpi=dpi, bbox_inches='tight', facecolor='white', edgecolor='none')
     plt.close()
     print(f"  高清组图已保存：{save_path}")
+
 
 # -------------------------- 新增：解析用户指定的样本（核心功能） --------------------------
 def parse_selected_samples(args, test_results, test_pairs, test_dataset_len):
@@ -205,13 +211,14 @@ def parse_selected_samples(args, test_results, test_pairs, test_dataset_len):
                 else:
                     print(f"  ❌ 索引 {idx} 对应的样本不存在")
             else:
-                print(f"  ❌ 索引 {idx} 超出范围（测试集共 {test_dataset_len} 个样本，索引0-{test_dataset_len-1}）")
+                print(f"  ❌ 索引 {idx} 超出范围（测试集共 {test_dataset_len} 个样本，索引0-{test_dataset_len - 1}）")
 
     # 3. 检查是否凑够4个样本（不足则提示并退出）
     if len(selected_samples) < 4:
         raise ValueError(f"\n[错误] 指定的有效样本仅 {len(selected_samples)} 个，需至少4个！")
-    
+
     return selected_samples
+
 
 # -------------------------- 核心测试函数 --------------------------
 def test_model(args):
@@ -234,21 +241,21 @@ def test_model(args):
     # 2. 创建保存目录
     os.makedirs(args.result_dir, exist_ok=True)
     os.makedirs(args.img_save_dir, exist_ok=True)
-    csv_save_path = os.path.join(args.result_dir, "test_metrics.csv")
-    group_img_save_path = os.path.join(args.img_save_dir, 
-                                       "selected_samples.png" if (args.selected_files or args.selected_indices) 
+    csv_save_path = os.path.join(args.result_dir, "test_metrics_C.csv")
+    group_img_save_path = os.path.join(args.img_save_dir,
+                                       "selected_samples.png" if (args.selected_files or args.selected_indices)
                                        else "top2_ssim_top2_psnr_samples.png")
 
     # 3. 加载测试集（默认PNG，如需HDF5请注释下面3行，取消HDF5加载代码）
     print("\n[1/5] 加载测试集...")
     test_pairs = get_pair_list(args.data_dir, split="test")
     test_dataset = CTDataset(test_pairs, target_size=256)
-    
+
     # -------------------------- 如需HDF5测试集，替换为以下代码 --------------------------
     # hdf5_path = os.path.join(args.data_dir, "test_dataset.h5")
     # test_dataset = CTHDF5Dataset(hdf5_path, target_size=256)
     # test_pairs = [(f"sample_{i}", f"sample_{i}") for i in range(len(test_dataset))]  # 虚拟配对列表，用于文件名
-    
+
     test_loader = DataLoader(
         test_dataset,
         batch_size=args.batch_size,
@@ -272,7 +279,7 @@ def test_model(args):
     elif "LDCTNet_Swin_improve" in args.model_path or args.model == "LDCTNet_Swin_improve":
         model = LDCTNet_Swin_improve().to(device)
     else:
-        model = RED_CNN().to(device)  # 默认模型
+        model = LDCTNet_NoResidualFusion().to(device)  # 默认模型
     print(f"  模型类型：{model.__class__.__name__}")
     print(f"  模型参数数量: {sum(p.numel() for p in model.parameters()):,}")
 
@@ -309,9 +316,9 @@ def test_model(args):
         # 逐张图像计算指标并保存信息
         for idx in range(batch_size):
             # 提取单张图像
-            ld_img = ld_imgs[idx:idx+1].clone()
-            nd_img = nd_imgs[idx:idx+1].clone()
-            output_img = outputs[idx:idx+1].clone()
+            ld_img = ld_imgs[idx:idx + 1].clone()
+            nd_img = nd_imgs[idx:idx + 1].clone()
+            output_img = outputs[idx:idx + 1].clone()
 
             # 计算指标
             metrics = metrics_fn(output_img, nd_img)
@@ -347,8 +354,8 @@ def test_model(args):
 
     # 6. 保存完整指标到CSV
     print("\n[4/5] 保存测试指标CSV...")
-    csv_df = pd.DataFrame([{k: v for k, v in r.items() if k not in ["ld_img", "nd_img", "output_img"]} 
-                          for r in test_results])
+    csv_df = pd.DataFrame([{k: v for k, v in r.items() if k not in ["ld_img", "nd_img", "output_img"]}
+                           for r in test_results])
     # 添加平均值行
     avg_row = {
         "filename": "average",
@@ -385,38 +392,41 @@ def test_model(args):
         print(f"{label}: {sample['filename']} | PSNR: {sample['psnr']:.2f} dB | SSIM: {sample['ssim']:.4f}")
     print("=" * 60)
 
+
 # -------------------------- 命令行参数配置（新增指定样本参数） --------------------------
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # 路径配置
-    parser.add_argument("--data_dir", type=str, default="./ND_LD_Paired_Data_0.7", 
+    parser.add_argument("--data_dir", type=str, default="./ND_LD_Paired_Data_0.5",
                         help="数据集根目录（PNG：含test子文件夹；HDF5：直接指向文件夹）")
-    parser.add_argument("--model_path", type=str, default="./checkpoints/best_model_aind0.7.pth", 
+    parser.add_argument("--model_path", type=str, default="./checkpoints/best_model_C.pth",
                         help="训练好的模型路径")
-    parser.add_argument("--result_dir", type=str, default="./test_results", 
+    parser.add_argument("--result_dir", type=str, default="./test_results",
                         help="测试指标CSV保存目录")
-    parser.add_argument("--img_save_dir", type=str, default="./test_image_floder_swin0.5", 
+    parser.add_argument("--img_save_dir", type=str, default="./test_image_floder",
                         help="测试组图保存目录")
     # 测试配置
     parser.add_argument("--batch_size", type=int, default=1, help="测试批量大小")
     parser.add_argument("--num_workers", type=int, default=4, help="数据加载线程数")
     parser.add_argument("--gpu", type=int, default=0, help="GPU编号（-1表示CPU）")
     parser.add_argument("--dpi", type=int, default=600, help="组图分辨率")
-    parser.add_argument("--model", type=str, default="AINDNet", choices=["RED_CNN", "AINDNet", "LDCTNet256", "LDCTNet_Swin_improve"],
+    parser.add_argument("--model", type=str, default="LDCTNet_NoFreq",
+                        choices=["RED_CNN", "AINDNet", "LDCTNet256", "LDCTNet_Swin_improve", "LDCTNet_NoFreq"],
                         help="指定模型类型（避免自动识别错误）")
     # 新增：指定4张样本的参数（二选一即可，需凑够4张）
-    parser.add_argument("--selected_files", nargs="+", type=str, default=['1490.png','1423.png','1250.png', '1155.png'],
+    parser.add_argument("--selected_files", nargs="+", type=str,
+                        default=['1490.png', '1423.png', '1250.png', '1155.png'],
                         help="指定测试的样本文件名（需是test集内的文件名，最多4个）")
     parser.add_argument("--selected_indices", nargs="+", type=int, default=None,
                         help="指定测试的样本索引（从0开始，如[0,1,2,3]，最多4个）")
     parser.add_argument("--selected_labels", nargs="+", type=str, default=None,
                         help="为指定样本自定义标签（顺序与selected_files/selected_indices对应，如['Case 1', 'Case 2']）")
-    
+
     args = parser.parse_args()
 
     # 执行测试
     test_model(args)
 
-    #0.5 ['3266.png','1601.png','0025.png', '1886.png']
-    #0.7 ['1490.png','1423.png','1250.png', '1155.png']
-    #0.3 ['3210.png','3006.png','1601.png', '0025.png']
+    # 0.5 ['3266.png','1601.png','0025.png', '1886.png']
+    # 0.7 ['1490.png','1423.png','1250.png', '1155.png']
+    # 0.3 ['3210.png','3006.png','1601.png', '0025.png']
