@@ -41,6 +41,7 @@ from Trans_model_writer import LDCTNet256
 from AINDNet import AINDNet  # 新增：导入AINDNet（如果需要测试该模型）
 from A_model import LDCTNet_NoFreq  # 新增：导入AINDNet（如果需要测试该模型）
 from C_model import LDCTNet_NoResidualFusion  # 新增：导入AINDNet（如果需要测试该模型）
+from WGAN_VGG import WGAN_VGG  # 新增：导入AINDNet（如果需要测试该模型）
 from utils import ImageMetrics  # 复用指标计算模块
 
 
@@ -241,7 +242,7 @@ def test_model(args):
     # 2. 创建保存目录
     os.makedirs(args.result_dir, exist_ok=True)
     os.makedirs(args.img_save_dir, exist_ok=True)
-    csv_save_path = os.path.join(args.result_dir, "test_metrics_C.csv")
+    csv_save_path = os.path.join(args.result_dir, "test_metrics_wgan3.csv")
     group_img_save_path = os.path.join(args.img_save_dir,
                                        "selected_samples.png" if (args.selected_files or args.selected_indices)
                                        else "top2_ssim_top2_psnr_samples.png")
@@ -279,7 +280,7 @@ def test_model(args):
     elif "LDCTNet_Swin_improve" in args.model_path or args.model == "LDCTNet_Swin_improve":
         model = LDCTNet_Swin_improve().to(device)
     else:
-        model = LDCTNet_NoResidualFusion().to(device)  # 默认模型
+        model = WGAN_VGG().to(device)  # 默认模型
     print(f"  模型类型：{model.__class__.__name__}")
     print(f"  模型参数数量: {sum(p.numel() for p in model.parameters()):,}")
 
@@ -309,7 +310,7 @@ def test_model(args):
 
         with torch.no_grad():
             # 新增：适配AINDNet的双输出（noise_map, recon_out）
-            outputs = model(ld_imgs)
+            outputs = model.generator(ld_imgs)
             if isinstance(outputs, tuple) and len(outputs) == 2:  # 判断是否为双输出
                 outputs = outputs[1]  # 只取重建图（recon_out）
 
@@ -324,6 +325,7 @@ def test_model(args):
             metrics = metrics_fn(output_img, nd_img)
             psnr = round(metrics["psnr"].item() if hasattr(metrics["psnr"], 'item') else metrics["psnr"], 4)
             ssim = round(metrics["ssim"].item() if hasattr(metrics["ssim"], 'item') else metrics["ssim"], 4)
+            ssim = round(metrics["rmse"].item() if hasattr(metrics["rmse"], 'item') else metrics["rmse"], 4)
 
             # 获取文件名（适配PNG和HDF5）
             sample_idx = batch_idx * args.batch_size + idx
@@ -336,7 +338,7 @@ def test_model(args):
             test_results.append({
                 "filename": filename,
                 "psnr": psnr,
-                "ssim": ssim,
+                "rmse": rmse,
                 "ld_img": ld_img,
                 "nd_img": nd_img,
                 "output_img": output_img
@@ -345,11 +347,13 @@ def test_model(args):
         # 进度条更新
         current_avg = {
             "psnr": np.mean([r["psnr"] for r in test_results]),
-            "ssim": np.mean([r["ssim"] for r in test_results])
+            "ssim": np.mean([r["ssim"] for r in test_results]),
+            "rmse": np.mean([r["rmse"] for r in test_results])
         }
         progress_bar.set_postfix({
             "avg_psnr": f"{current_avg['psnr']:.2f}",
-            "avg_ssim": f"{current_avg['ssim']:.4f}"
+            "avg_ssim": f"{current_avg['ssim']:.4f}",
+            "avg_rmse": f"{current_avg['rmse']:.4f}"
         })
 
     # 6. 保存完整指标到CSV
@@ -397,9 +401,9 @@ def test_model(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # 路径配置
-    parser.add_argument("--data_dir", type=str, default="./ND_LD_Paired_Data_0.5",
+    parser.add_argument("--data_dir", type=str, default="./ND_LD_Paired_Data_0.3",
                         help="数据集根目录（PNG：含test子文件夹；HDF5：直接指向文件夹）")
-    parser.add_argument("--model_path", type=str, default="./checkpoints/best_model_C.pth",
+    parser.add_argument("--model_path", type=str, default="./checkpoints/best_wgan_0.3.pth",
                         help="训练好的模型路径")
     parser.add_argument("--result_dir", type=str, default="./test_results",
                         help="测试指标CSV保存目录")
@@ -410,12 +414,12 @@ if __name__ == "__main__":
     parser.add_argument("--num_workers", type=int, default=4, help="数据加载线程数")
     parser.add_argument("--gpu", type=int, default=0, help="GPU编号（-1表示CPU）")
     parser.add_argument("--dpi", type=int, default=600, help="组图分辨率")
-    parser.add_argument("--model", type=str, default="LDCTNet_NoFreq",
+    parser.add_argument("--model", type=str, default="WGAN_VGG",
                         choices=["RED_CNN", "AINDNet", "LDCTNet256", "LDCTNet_Swin_improve", "LDCTNet_NoFreq"],
                         help="指定模型类型（避免自动识别错误）")
     # 新增：指定4张样本的参数（二选一即可，需凑够4张）
     parser.add_argument("--selected_files", nargs="+", type=str,
-                        default=['1490.png', '1423.png', '1250.png', '1155.png'],
+                        default=['3210.png','3006.png','1601.png', '0025.png'],
                         help="指定测试的样本文件名（需是test集内的文件名，最多4个）")
     parser.add_argument("--selected_indices", nargs="+", type=int, default=None,
                         help="指定测试的样本索引（从0开始，如[0,1,2,3]，最多4个）")
