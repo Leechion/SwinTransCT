@@ -242,7 +242,7 @@ def test_model(args):
     # 2. 创建保存目录
     os.makedirs(args.result_dir, exist_ok=True)
     os.makedirs(args.img_save_dir, exist_ok=True)
-    csv_save_path = os.path.join(args.result_dir, "test_metrics_wgan3.csv")
+    csv_save_path = os.path.join(args.result_dir, "test_metrics_wgan7.csv")
     group_img_save_path = os.path.join(args.img_save_dir,
                                        "selected_samples.png" if (args.selected_files or args.selected_indices)
                                        else "top2_ssim_top2_psnr_samples.png")
@@ -325,7 +325,7 @@ def test_model(args):
             metrics = metrics_fn(output_img, nd_img)
             psnr = round(metrics["psnr"].item() if hasattr(metrics["psnr"], 'item') else metrics["psnr"], 4)
             ssim = round(metrics["ssim"].item() if hasattr(metrics["ssim"], 'item') else metrics["ssim"], 4)
-            ssim = round(metrics["rmse"].item() if hasattr(metrics["rmse"], 'item') else metrics["rmse"], 4)
+            rmse = round(metrics["rmse"].item() if hasattr(metrics["rmse"], 'item') else metrics["rmse"], 4)
 
             # 获取文件名（适配PNG和HDF5）
             sample_idx = batch_idx * args.batch_size + idx
@@ -338,6 +338,7 @@ def test_model(args):
             test_results.append({
                 "filename": filename,
                 "psnr": psnr,
+                "ssim": ssim,
                 "rmse": rmse,
                 "ld_img": ld_img,
                 "nd_img": nd_img,
@@ -364,7 +365,8 @@ def test_model(args):
     avg_row = {
         "filename": "average",
         "psnr": round(csv_df["psnr"].mean(), 4),
-        "ssim": round(csv_df["ssim"].mean(), 4)
+        "ssim": round(csv_df["ssim"].mean(), 4),
+        "rmse": round(csv_df["rmse"].mean(), 4)
     }
     csv_df = pd.concat([csv_df, pd.DataFrame([avg_row])], ignore_index=True)
     csv_df.to_csv(csv_save_path, index=False, encoding="utf-8-sig")
@@ -401,9 +403,9 @@ def test_model(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # 路径配置
-    parser.add_argument("--data_dir", type=str, default="./ND_LD_Paired_Data_0.3",
+    parser.add_argument("--data_dir", type=str, default="./ND_LD_Paired_Data_0.7",
                         help="数据集根目录（PNG：含test子文件夹；HDF5：直接指向文件夹）")
-    parser.add_argument("--model_path", type=str, default="./checkpoints/best_wgan_0.3.pth",
+    parser.add_argument("--model_path", type=str, default="./checkpoints/best_model_wgan_0.7.pth",
                         help="训练好的模型路径")
     parser.add_argument("--result_dir", type=str, default="./test_results",
                         help="测试指标CSV保存目录")
@@ -419,7 +421,7 @@ if __name__ == "__main__":
                         help="指定模型类型（避免自动识别错误）")
     # 新增：指定4张样本的参数（二选一即可，需凑够4张）
     parser.add_argument("--selected_files", nargs="+", type=str,
-                        default=['3210.png','3006.png','1601.png', '0025.png'],
+                        default= ['1490.png','1423.png','1250.png', '1155.png'],
                         help="指定测试的样本文件名（需是test集内的文件名，最多4个）")
     parser.add_argument("--selected_indices", nargs="+", type=int, default=None,
                         help="指定测试的样本索引（从0开始，如[0,1,2,3]，最多4个）")
