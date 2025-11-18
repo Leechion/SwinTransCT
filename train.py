@@ -428,7 +428,7 @@ def main(args):
                 "best_val_epoch": best_val_epoch,
                 "val_metrics": val_metrics  # 保存当前验证集指标
             }
-            best_model_path = os.path.join(args.save_dir, "best_model_wgan_0.5.pth")
+            best_model_path = os.path.join(args.save_dir, "best_model_wgan_0.7.pth")
             torch.save(checkpoint, best_model_path)
             print(f"[保存最佳模型] Epoch {epoch} | 验证集PSNR：{best_val_psnr:.2f} dB | 验证集SSIM：{best_val_ssim:.4f}")
 
@@ -455,7 +455,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", type=str, default="./ND_LD_Paired_Data_0.5")
+    parser.add_argument("--data_dir", type=str, default="./ND_LD_Paired_Data_0.7")
     parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--batch_size", type=int, default=8)
     parser.add_argument("--lr", type=float, default=1e-4)
